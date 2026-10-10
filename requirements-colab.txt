@@ -1,0 +1,8 @@
+# Colab already ships numpy, pandas, matplotlib, scikit-learn, and torch.
+# Only install what Colab is missing. Run this as the first cell of any notebook:
+#   !pip install -q -r requirements-colab.txt
+polars>=1.0
+pyarrow>=16.0
+datasets>=2.20
+transformers>=4.40
+umap-learn>=0.5
