@@ -48,7 +48,7 @@ code,.mono{font-family:var(--f-mono);font-size:.92em}
 .chart svg{width:100%;height:100%;display:block}
 .chart svg text{font-family:var(--f-body)}
 .pill{align-self:flex-start;background:var(--amber);color:#0F172A;font-weight:700;padding:7px 18px;border-radius:999px;font-size:23px}
-.hs{display:flex;gap:14px;align-items:flex-start;background:var(--panel);border:1px solid var(--line);border-left:5px solid var(--acc);
+.hs{display:flex;gap:14px;align-items:flex-start;background:#2A2113;border:1px solid #92400E;border-left:5px solid var(--amber);
   border-radius:12px;padding:12px 16px}
 .hs .ico{width:34px;height:34px;flex:none;color:var(--amber);margin-top:1px}
 .hs b{color:var(--amber)}
@@ -56,9 +56,11 @@ code,.mono{font-family:var(--f-mono);font-size:.92em}
 .eq .katex-display{margin:2px 0}
 .where{font-size:20px;color:var(--muted)}
 .uw{display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:20px}
-.uw>div{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 14px}
-.uw .ok::before{content:"Use when";display:block;font-weight:700;color:var(--cyan)}
-.uw .no::before{content:"Avoid when";display:block;font-weight:700;color:var(--amber)}
+.uw>div{border-radius:10px;padding:8px 14px}
+.uw .ok{background:#082F3A;border:1px solid #0E7490}
+.uw .no{background:#2E1A0A;border:1px solid #B45309}
+.uw .ok::before{content:"Use when";display:block;font-weight:700;color:#67E8F9}
+.uw .no::before{content:"Avoid when";display:block;font-weight:700;color:#FCD34D}
 .foot{display:grid;grid-template-columns:1fr 1fr;gap:28px;font-size:20px;color:var(--muted)}
 .foot>div{border-top:2px solid var(--acc);padding-top:8px}
 .foot b{color:var(--text)}
@@ -68,16 +70,23 @@ ul.b li{margin:5px 0}
 ul.b li::marker{color:var(--acc-t)}
 .hl{color:var(--amber);font-weight:600}
 .ac{color:var(--acc-t);font-weight:600}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 18px}
+.card{background:#1E1B4B;border:1px solid #4F46E5;border-radius:14px;padding:14px 18px}
 .notes{display:none}
 .mm{flex:1;min-height:0;margin:0;display:flex;align-items:center;justify-content:center;font-family:var(--f-body)}
 pre.mermaid:not([data-processed]){visibility:hidden}
 .mm svg{width:100%!important;max-width:100%!important;height:100%!important}
-.slide[data-section="dl"] .mm .node :is(rect,polygon,circle){stroke:var(--amber)!important}
-.slide[data-section="unsup"] .mm .node :is(rect,polygon,circle){stroke:var(--cyan)!important}
+.mm foreignObject{overflow:visible}
+.mm foreignObject div{white-space:nowrap}
+/* abbreviation glossary strip */
+.gloss{margin-top:auto;flex:none;font-size:20px;line-height:1.35;color:var(--muted);border-top:1px solid var(--line);padding-top:8px}
+.gloss>span:not(:first-child)::before{content:"  ·  ";white-space:pre;color:var(--dim)}
+.gloss b{color:#67E8F9;font-weight:700}
+/* capstone */
+.cm-big{font:700 30px var(--f-mono);color:#67E8F9}
 table.t{border-collapse:collapse;font-size:20px;width:100%}
 table.t th,table.t td{border:1px solid var(--line);padding:7px 10px;text-align:left}
-table.t th{background:var(--panel);font-family:var(--f-head);color:var(--acc-t)}
+table.t th{background:#312E81;font-family:var(--f-head);color:#E0E7FF}
+table.t tr:nth-child(even) td{background:#162036}
 table.t td.n{text-align:right;font-family:var(--f-mono)}
 /* title slide */
 .title-slide{justify-content:center}
@@ -125,6 +134,23 @@ table.t td.n{text-align:right;font-family:var(--f-mono)}
   <aside class="notes">Welcome everyone. Over the next hour we'll go from a straight line to the Transformers behind today's LLMs. One fictional product, HomeScope, ties it all together, and each new algorithm will solve a problem the previous one couldn't. Ask quick questions anytime; save deep dives for the Q&amp;A at the end.</aside>
 </section>
 
+<section class="slide" data-section="core" data-label="Opening" data-min="1.25">
+  <h2>Meet <span class="k">HomeScope</span></h2>
+  <p class="from">A fictional home-buying site. Each question it asks maps to one family of algorithms</p>
+  <table class="t">
+    <tr><th>HomeScope question</th><th>Simple example (input → output)</th><th>Technique</th><th>How we measure it</th></tr>
+    <tr><td>What is this home worth?</td><td>2,100 sqft, 3 bed, built 1998 → <b>$427k</b></td><td>Regression</td><td>MAE: typical $ miss</td></tr>
+    <tr><td>Will it sell within 30 days?</td><td>new listing → <b>72% yes</b></td><td>Classification</td><td>F1, ROC-AUC</td></tr>
+    <tr><td>Is this listing a scam?</td><td>"wire the deposit today" → <b>flag</b></td><td>Naive Bayes, anomaly detection</td><td>Precision &amp; recall</td></tr>
+    <tr><td>Which neighborhoods are alike?</td><td>40 zip codes → <b>5 segments</b></td><td>Clustering, PCA</td><td>Silhouette score</td></tr>
+    <tr><td>Which homes will this buyer like?</td><td>past clicks → <b>top 10 homes</b></td><td>Recommenders, embeddings</td><td>Recall@10, CTR</td></tr>
+    <tr><td>What does this photo show?</td><td>photo → <b>"kitchen, renovated"</b></td><td>CNN</td><td>Accuracy per room type</td></tr>
+    <tr><td>Can I just ask?</td><td>"quiet 3-bed near good schools" → <b>answer + listings</b></td><td>LLM + RAG</td><td>Grounded-answer rate</td></tr>
+  </table>
+  <div class="hs"><svg class="ico"><use href="#house"/></svg><div><b>Data HomeScope has:</b> past sales (prices = labels), listing text, photos, and buyer clicks. All numbers in this deck are illustrative.</div></div>
+  <aside class="notes">This is the map for the whole talk. HomeScope is made up, but every row is a real problem that housing sites solve. Each row returns later with its own algorithm slide: price first, then yes/no questions, then grouping without labels, then recommendations, photos, and finally the assistant. Point at the last column: every model needs a metric chosen before training, and it should match the business cost. Silhouette score measures how tight and well separated clusters are, from −1 to 1.</aside>
+</section>
+
 <section class="slide" data-section="core" data-label="Opening" data-min="1">
   <h2>Why ML <span class="k">now?</span></h2>
   <div class="cols">
@@ -165,18 +191,24 @@ mindmap
   <h2>Agenda: an <span class="k">evolution</span></h2>
   <p class="from">Each step solves a problem the last one couldn't</p>
 <pre class="mermaid mm">
-timeline
-  title HomeScope grows up
-  section Classical ML
-    Regression : Predict sale price
-    Classification : Sells in 30 days? Fraud?
-  section Unsupervised
-    Clustering and PCA : Neighborhood groups
-    Recommenders : Homes you may like
-  section Deep Learning
-    MLP and CNN : Photo condition
-    RNN to Transformer : Descriptions and trends
-    LLMs : Search assistant
+flowchart LR
+  subgraph C1["1 · Classical ML"]
+    direction TB
+    a1["Regression<br/>predict sale price"] --> a2["Classification<br/>sells fast? fraud?"]
+  end
+  subgraph C2["2 · Unsupervised"]
+    direction TB
+    b1["Clustering and PCA<br/>neighborhood groups"] --> b2["Recommenders<br/>homes you may like"]
+  end
+  subgraph C3["3 · Deep Learning"]
+    direction TB
+    c1["MLP and CNN<br/>photo condition"] --> c2["RNN to Transformer<br/>text and trends"] --> c3["LLMs<br/>search assistant"]
+  end
+  subgraph C4["4 · Production"]
+    direction TB
+    d1["End-to-end system<br/>and MLOps"] --> d2["Capstone<br/>tumor classifier"]
+  end
+  C1 --> C2 --> C3 --> C4
 </pre>
   <aside class="notes">Here's the path. We start with classical supervised learning on tabular data, move to finding structure without labels, then reach deep learning once hand-built features stop working. We finish by connecting everything into one HomeScope architecture and covering how to keep it healthy in production.</aside>
 </section>
@@ -200,7 +232,7 @@ timeline
   <aside class="notes">These terms are nested, not competing. A hard-coded rule is AI but not ML. Most production "AI" today is ML, and the newest wave, generative AI, sits inside deep learning. Draw the contrast between writing rules and learning rules from examples.</aside>
 </section>
 
-<section class="slide" data-section="core" data-label="Foundations" data-min="1.5">
+<section class="slide" data-section="core" data-label="Foundations" data-min="1.25">
   <h2>Three ways to <span class="k">learn</span></h2>
   <div class="cols">
     <div class="col">
@@ -244,7 +276,7 @@ flowchart LR
   <aside class="notes">The model is maybe 10–20% of the work; data and features dominate. Two classic mistakes are leakage, where information from the future or the test set sneaks into training, and evaluating on the same data you trained on. For time-dependent problems like house prices, split by time, not at random.</aside>
 </section>
 
-<section class="slide" data-section="core" data-label="Foundations" data-min="1.5">
+<section class="slide" data-section="core" data-label="Foundations" data-min="1.25">
   <h2>Bias–variance &amp; <span class="k">overfitting</span></h2>
   <div class="cols">
     <div class="col">
@@ -260,7 +292,7 @@ flowchart LR
 </section>
 
 <!-- ============ 3. REGRESSION ============ -->
-<section class="slide" data-section="classical" data-label="Classical ML · Regression" data-min="1.5">
+<section class="slide" data-section="classical" data-label="Classical ML · Regression" data-min="1.25">
   <h2>Linear <span class="k">Regression</span></h2>
   <p class="from">With the vocabulary set, start with the simplest model: a line</p>
   <div class="cols">
@@ -277,7 +309,7 @@ flowchart LR
   <aside class="notes">Each weight has a direct meaning: dollars per extra square foot, holding the others fixed. Least squares has a closed form, w = (XᵀX)⁻¹Xᵀy, and the curriculum shows both it and gradient descent. Always ship a linear baseline first so you know what "good" looks like. About 1.5 minutes.</aside>
 </section>
 
-<section class="slide" data-section="classical" data-label="Classical ML · Regression" data-min="1.5">
+<section class="slide" data-section="classical" data-label="Classical ML · Regression" data-min="1.25">
   <h2>Gradient <span class="k">Descent</span></h2>
   <div class="cols">
     <div class="col">
@@ -293,7 +325,7 @@ flowchart LR
   <aside class="notes">The cyan path uses a good learning rate and converges smoothly. The amber path's rate is too big, so it overshoots and oscillates; any larger and it diverges. This one optimizer idea carries us all the way to Transformers. Only the model and the loss change.</aside>
 </section>
 
-<section class="slide" data-section="classical" data-label="Classical ML · Regression" data-min="1.5">
+<section class="slide" data-section="classical" data-label="Classical ML · Regression" data-min="1.25">
   <h2>Polynomial features &amp; <span class="k">Regularization</span></h2>
   <div class="cols">
     <div class="col">
@@ -338,7 +370,7 @@ flowchart LR
     <div class="col viz">
 <pre class="mermaid mm">
 flowchart LR
-  Q{"What are we<br/>predicting?"} -->|a number| R["Regression<br/>sale price"]
+  Q{{"What are we<br/>predicting?"}} -->|a number| R["Regression<br/>sale price"]
   Q -->|a category| C["Classification<br/>sells fast, fraud"]
   Q -->|no label| U["Unsupervised<br/>clusters"]
 </pre>
@@ -348,7 +380,7 @@ flowchart LR
 </section>
 
 <!-- ============ 4. CLASSIFICATION ============ -->
-<section class="slide" data-section="classical" data-label="Classical ML · Classification" data-min="1.5">
+<section class="slide" data-section="classical" data-label="Classical ML · Classification" data-min="1.25">
   <h2>Logistic <span class="k">Regression</span></h2>
   <p class="from">Regression gave us numbers; now we need probabilities of "yes"</p>
   <div class="cols">
@@ -394,14 +426,14 @@ flowchart LR
     </div>
     <div class="col viz">
 <pre class="mermaid mm">
-flowchart LR
+flowchart TD
   T["Listing text"] --> W1["wire deposit"]
   T --> W2["owner overseas"]
   T --> W3["no viewings"]
   W1 --> P["Multiply priors<br/>and word likelihoods"]
   W2 --> P
   W3 --> P
-  P --> O{"Fraud 0.93<br/>Legit 0.07"}
+  P --> O(["Fraud 0.93 · Legit 0.07"])
 </pre>
     </div>
   </div>
@@ -409,7 +441,7 @@ flowchart LR
   <aside class="notes">Naive Bayes applies Bayes' theorem with the "naive" assumption that features are independent given the class. That assumption is almost always false, but the classifier often still ranks well; its probabilities tend to be overconfident. In practice, sum log-probabilities and use Laplace smoothing so an unseen word doesn't zero out the product.</aside>
 </section>
 
-<section class="slide" data-section="classical" data-label="Classical ML · Classification" data-min="1.5">
+<section class="slide" data-section="classical" data-label="Classical ML · Classification" data-min="1.25">
   <h2>Decision <span class="k">Trees</span></h2>
   <div class="cols">
     <div class="col">
@@ -422,8 +454,8 @@ flowchart LR
     <div class="col viz">
 <pre class="mermaid mm">
 flowchart TD
-  A{"Price above area<br/>median by 10 pct?"} -->|yes| B{"Fewer than<br/>8 photos?"}
-  A -->|no| C{"Listed in<br/>spring?"}
+  A{{"Price above area<br/>median by 10 pct?"}} -->|yes| B{{"Fewer than<br/>8 photos?"}}
+  A -->|no| C{{"Listed in<br/>spring?"}}
   B -->|yes| D["Slow<br/>P fast = 0.22"]
   B -->|no| E["Mixed<br/>P fast = 0.48"]
   C -->|yes| F["Fast<br/>P fast = 0.81"]
@@ -435,7 +467,7 @@ flowchart TD
   <aside class="notes">A tree greedily picks the question that best separates the classes, then recurses. Trees need no feature scaling and handle categorical features and interactions naturally. But a deep tree memorizes the data and small data changes flip its structure; that's high variance. The next two slides fix that in two different ways.</aside>
 </section>
 
-<section class="slide" data-section="classical" data-label="Classical ML · Classification" data-min="1.5">
+<section class="slide" data-section="classical" data-label="Classical ML · Classification" data-min="1.25">
   <h2>Random <span class="k">Forests</span></h2>
   <div class="cols">
     <div class="col">
@@ -451,7 +483,7 @@ flowchart LR
   D[("Training data")] --> S1["Bootstrap 1"] --> T1["Tree 1"]
   D --> S2["Bootstrap 2"] --> T2["Tree 2"]
   D --> S3["Bootstrap B"] --> T3["Tree B"]
-  T1 --> V{"Average<br/>or vote"}
+  T1 --> V{{"Average<br/>or vote"}}
   T2 --> V
   T3 --> V
 </pre>
@@ -461,7 +493,7 @@ flowchart LR
   <aside class="notes">Bagging plus random feature subsets makes the trees disagree in useful ways, and averaging cancels their individual errors. Trees train in parallel. Out-of-bag samples give a free validation estimate. Random forests rarely overfit badly as you add trees; more trees just cost more compute.</aside>
 </section>
 
-<section class="slide" data-section="classical" data-label="Classical ML · Classification" data-min="1.5">
+<section class="slide" data-section="classical" data-label="Classical ML · Classification" data-min="1.25">
   <h2>Gradient <span class="k">Boosting</span> <span style="font-size:26px;color:var(--dim)">XGBoost · LightGBM</span></h2>
   <div class="cols">
     <div class="col">
@@ -474,11 +506,9 @@ flowchart LR
     <div class="col viz">
 <pre class="mermaid mm">
 flowchart TD
-  T1["Tree 1<br/>rough price"] --> R1["Residuals<br/>what it got wrong"]
-  R1 --> T2["Tree 2<br/>fits residuals"]
-  T2 --> R2["Smaller residuals"]
-  R2 --> T3["Tree 3 ... M"]
-  T3 --> SUM["Sum of all trees<br/>final prediction"]
+  T1["Tree 1<br/>rough price"] -->|"residuals"| T2["Tree 2<br/>fits what Tree 1 missed"]
+  T2 -->|"smaller residuals"| T3["Trees 3 … M<br/>fit what is left"]
+  T3 --> SUM(["Sum of all trees<br/>= final price"])
 </pre>
     </div>
   </div>
@@ -502,7 +532,7 @@ flowchart TD
   <aside class="notes">Circled points are the support vectors; move any other point and the boundary doesn't change. The soft-margin version adds slack with a C penalty for overlapping classes. The kernel trick (RBF, polynomial) gives curved boundaries without explicitly computing features, but kernel SVMs scale roughly quadratically with data size.</aside>
 </section>
 
-<section class="slide" data-section="classical" data-label="Classical ML · Classification" data-min="1.5">
+<section class="slide" data-section="classical" data-label="Classical ML · Classification" data-min="1.25">
   <h2>Classification <span class="k">metrics</span></h2>
   <div class="cols">
     <div class="col">
@@ -519,7 +549,7 @@ flowchart TD
 </section>
 
 <!-- ============ 5. UNSUPERVISED ============ -->
-<section class="slide" data-section="unsup" data-label="Unsupervised Learning" data-min="1.5">
+<section class="slide" data-section="unsup" data-label="Unsupervised Learning" data-min="1.25">
   <h2>K-<span class="k">Means</span> Clustering</h2>
   <p class="from">Classifiers need labels. Neighborhood "types" have none.</p>
   <div class="cols">
@@ -536,7 +566,7 @@ flowchart TD
   <aside class="notes">Each iteration can only lower J, so K-Means always converges, though possibly to a local minimum; that's why we use k-means++ and multiple restarts. Choose k with the elbow method or the silhouette score, and sanity-check with domain experts. Scale features first, since it's distance-based like kNN.</aside>
 </section>
 
-<section class="slide" data-section="unsup" data-label="Unsupervised Learning" data-min="1.5">
+<section class="slide" data-section="unsup" data-label="Unsupervised Learning" data-min="1.25">
   <h2>DBSCAN &amp; <span class="k">Hierarchical</span> clustering</h2>
   <p class="from">K-Means assumes round blobs and needs k</p>
   <div class="cols">
@@ -553,7 +583,7 @@ flowchart TD
   <aside class="notes">Top chart: DBSCAN recovers two curved clusters and marks scattered points as noise (gray crosses), which K-Means can't do. Bottom chart: agglomerative clustering merges the closest groups step by step; cut the dendrogram at any height to get that many clusters, e.g. metro → district → neighborhood. Hierarchical clustering is O(n²) or worse, so use it on aggregated data.</aside>
 </section>
 
-<section class="slide" data-section="unsup" data-label="Unsupervised Learning" data-min="1.5">
+<section class="slide" data-section="unsup" data-label="Unsupervised Learning" data-min="1.25">
   <h2>Principal Component <span class="k">Analysis</span></h2>
   <div class="cols">
     <div class="col">
@@ -586,7 +616,7 @@ flowchart TD
 </section>
 
 <!-- ============ 6. RECOMMENDATION ============ -->
-<section class="slide" data-section="unsup" data-label="Recommendation Systems" data-min="1.5">
+<section class="slide" data-section="unsup" data-label="Recommendation Systems" data-min="1.25">
   <h2>Collaborative filtering → <span class="k">Matrix Factorization</span></h2>
   <p class="from">Clusters describe groups, but every buyer's taste is personal</p>
   <div class="cols wr">
@@ -615,9 +645,9 @@ flowchart TD
     <div class="col viz">
 <pre class="mermaid mm">
 flowchart LR
-  U["User features<br/>history, searches"] --> UT["User tower<br/>neural net"] --> UE(("user<br/>vector"))
-  H["Home features<br/>photos, text, price"] --> HT["Home tower<br/>neural net"] --> HE(("home<br/>vector"))
-  UE --> S{"dot product"}
+  U["User: history,<br/>searches"] --> UT["User tower"] --> UE(("u"))
+  H["Home: photos,<br/>text, price"] --> HT["Home tower"] --> HE(("v"))
+  UE --> S{{"u · v"}}
   HE --> S
   S --> R["Top-k homes"]
 </pre>
@@ -683,7 +713,7 @@ quadrantChart
 </section>
 
 <!-- ============ 8. DEEP LEARNING ============ -->
-<section class="slide" data-section="dl" data-label="Deep Learning" data-min="1.5">
+<section class="slide" data-section="dl" data-label="Deep Learning" data-min="1.25">
   <h2>Perceptron → <span class="k">MLP</span></h2>
   <p class="from">Let the model learn its own features</p>
   <div class="cols">
@@ -716,7 +746,7 @@ quadrantChart
   <aside class="notes">For a sigmoid, the gradient is at most 0.25, and it's near zero when the unit saturates. Multiply that across many layers and the gradients vanish. ReLU has gradient 1 for positive inputs, which is a big reason deep nets became trainable. GELU is a smooth ReLU-like variant common in Transformers.</aside>
 </section>
 
-<section class="slide" data-section="dl" data-label="Deep Learning" data-min="1.5">
+<section class="slide" data-section="dl" data-label="Deep Learning" data-min="1.25">
   <h2><span class="k">Backpropagation</span></h2>
   <div class="cols">
     <div class="col">
@@ -743,7 +773,7 @@ flowchart TD
   <aside class="notes">Solid arrows are the forward pass; we cache the intermediate z and a values. Dotted arrows are the backward pass: start from the loss and apply the chain rule layer by layer, reusing the downstream gradient each time. Backward costs roughly the same as forward. You'll almost never write it by hand. loss.backward() does it, but knowing it helps you debug exploding or vanishing gradients.</aside>
 </section>
 
-<section class="slide" data-section="dl" data-label="Deep Learning" data-min="1.5">
+<section class="slide" data-section="dl" data-label="Deep Learning" data-min="1.25">
   <h2>Optimizers: <span class="k">SGD → Adam</span></h2>
   <div class="cols">
     <div class="col">
@@ -759,7 +789,7 @@ flowchart TD
   <aside class="notes">Momentum smooths noisy mini-batch gradients and speeds up travel along consistent directions. Adam adds per-parameter scaling, so rarely updated weights take bigger steps. The bias correction fixes the zero-initialized moments in early steps. In practice, use AdamW with warmup and a learning-rate decay schedule. The learning rate is still the most important hyperparameter.</aside>
 </section>
 
-<section class="slide" data-section="dl" data-label="Deep Learning" data-min="1.5">
+<section class="slide" data-section="dl" data-label="Deep Learning" data-min="1.25">
   <h2>Convolutional Neural <span class="k">Networks</span></h2>
   <p class="from">An MLP treats a 224×224×3 photo as 150k unrelated numbers</p>
   <div class="cols">
@@ -796,7 +826,7 @@ flowchart LR
   <aside class="notes">The feature hierarchy, edges then textures then parts then objects, was shown visually by Zeiler and Fergus in 2014. Practically: never train a vision model from scratch for a product feature; fine-tune a pretrained backbone. Vision Transformers are a strong alternative today, but CNNs remain efficient and common.</aside>
 </section>
 
-<section class="slide" data-section="dl" data-label="Deep Learning" data-min="1.5">
+<section class="slide" data-section="dl" data-label="Deep Learning" data-min="1.25">
   <h2>RNN &amp; <span class="k">LSTM</span></h2>
   <p class="from">CNNs see grids. Price trends and text are sequences where order matters.</p>
   <div class="cols">
@@ -824,7 +854,7 @@ flowchart LR
   <aside class="notes">A vanilla RNN multiplies by the same matrix at every step, so gradients vanish or explode over long sequences. LSTM gates create a path that lets information and gradients travel further. GRU is a lighter variant. Two limits remain: the whole past is squeezed into one fixed-size vector, and steps must be computed one after another, which is slow on GPUs. Attention fixes both.</aside>
 </section>
 
-<section class="slide" data-section="dl" data-label="Deep Learning" data-min="1.5">
+<section class="slide" data-section="dl" data-label="Deep Learning" data-min="1.25">
   <h2><span class="k">Attention</span></h2>
   <p class="from">An LSTM squeezes the whole past through one hidden state</p>
   <div class="cols">
@@ -840,7 +870,7 @@ flowchart LR
   <aside class="notes">Each token produces a query, a key and a value by multiplying its embedding by learned matrices. Query–key dot products give relevance scores; softmax turns each row into weights that sum to 1, and the output is a weighted average of values. Dividing by √d_k matters: with large dimensions, dot products grow and would push the softmax into near one-hot regions with tiny gradients.</aside>
 </section>
 
-<section class="slide" data-section="dl" data-label="Deep Learning" data-min="1.5">
+<section class="slide" data-section="dl" data-label="Deep Learning" data-min="1.25">
   <h2>The <span class="k">Transformer</span></h2>
   <div class="cols">
     <div class="col">
@@ -853,12 +883,11 @@ flowchart LR
     <div class="col viz">
 <pre class="mermaid mm">
 flowchart TD
-  T["Tokens of listing text"] --> E["Embeddings + positions"]
-  E --> MHA["Multi-head self-attention"]
+  E["Listing tokens<br/>embeddings + positions"] --> MHA["Multi-head self-attention"]
   MHA --> N1["Add and LayerNorm"]
   N1 --> FF["Feed-forward MLP"]
   FF --> N2["Add and LayerNorm"]
-  N2 --> O["Repeat N times, then task head"]
+  N2 --> O(["× N layers, then task head"])
   E -. residual .-> N1
   N1 -. residual .-> N2
 </pre>
@@ -884,7 +913,7 @@ flowchart TD
   <aside class="notes">We've already met embeddings three times: MF user and home vectors, two-tower outputs, and the Transformer's input layer. Real embeddings have hundreds of dimensions; this plot is a 2-D illustration. Combine vector search with hard filters, such as price and beds, because embeddings are fuzzy by design.</aside>
 </section>
 
-<section class="slide" data-section="dl" data-label="Deep Learning" data-min="1.5">
+<section class="slide" data-section="dl" data-label="Deep Learning" data-min="1.25">
   <h2>Generative models: <span class="k">AE · GAN · Diffusion</span></h2>
   <div class="cols wr">
     <div class="col">
@@ -899,16 +928,16 @@ flowchart TD
 flowchart TB
   subgraph AE["Autoencoder"]
     direction LR
-    a1["Photo"] --> a2["Encoder"] --> a3(("code z")) --> a4["Decoder"] --> a5["Rebuilt photo"]
+    a1["Photo"] --> a2["Encoder"] --> a3(("z")) --> a4["Decoder"] --> a5["Photo′"]
   end
   subgraph GAN["GAN"]
     direction LR
-    g1["Noise"] --> g2["Generator"] --> g3["Fake"] --> g4{"Discriminator"}
+    g1["Noise"] --> g2["Generator"] --> g4{{"Real or fake?"}}
     g5["Real"] --> g4
   end
   subgraph DIF["Diffusion"]
     direction LR
-    d1["Pure noise"] --> d2["Denoise"] --> d3["Denoise"] --> d4["Image"]
+    d1["Noise"] --> d2["Denoise × T steps"] --> d4["Image"]
   end
   AE ~~~ GAN ~~~ DIF
 </pre>
@@ -918,7 +947,7 @@ flowchart TB
   <aside class="notes">Autoencoders compress and reconstruct; high reconstruction error means "unlike training data", which makes them useful for anomaly detection. GANs pit two networks against each other; they're sharp but unstable to train. Diffusion learns to undo noise step by step; it's slower to sample but stable and high-quality. Disclose generated imagery; virtual staging must be labeled to avoid misleading buyers.</aside>
 </section>
 
-<section class="slide" data-section="dl" data-label="Deep Learning" data-min="1.5">
+<section class="slide" data-section="dl" data-label="Deep Learning" data-min="1.25">
   <h2>LLMs: how they're <span class="k">trained</span></h2>
   <div class="cols">
     <div class="col">
@@ -941,7 +970,7 @@ flowchart TD
   <aside class="notes">Pretraining is self-supervised, so the labels are just the next token, which is why it scales to trillions of tokens. Supervised fine-tuning teaches the assistant format. Preference tuning teaches which answers humans prefer; DPO (Rafailov et al., 2023) is a popular simpler alternative to the RL step. For HomeScope we'd rarely pretrain. We'd prompt, retrieve, and maybe lightly fine-tune.</aside>
 </section>
 
-<section class="slide" data-section="dl" data-label="Deep Learning" data-min="1.5">
+<section class="slide" data-section="dl" data-label="Deep Learning" data-min="1.25">
   <h2>HomeScope <span class="k">assistant</span>: LLM + RAG + tools</h2>
   <div style="display:flex;gap:18px;align-items:center">
     <div class="pill" style="align-self:center">LLM as the brain, tools as the hands</div>
@@ -973,17 +1002,17 @@ sequenceDiagram
 </section>
 
 <!-- ============ 9. PUTTING IT TOGETHER ============ -->
-<section class="slide" data-section="core" data-label="Putting It Together" data-min="1.5">
+<section class="slide" data-section="core" data-label="Putting It Together" data-min="1.25">
   <h2>Choosing an <span class="k">algorithm</span></h2>
   <p class="from">We've met a dozen tools. How do you pick one?</p>
 <pre class="mermaid mm">
 flowchart LR
-  S{"Labels?"} -->|no| U{"Goal?"}
+  S{{"Labels?"}} -->|no| U{{"Goal?"}}
   U -->|groups| K["K-Means or DBSCAN"]
   U -->|compress| P["PCA"]
   U -->|outliers| I["Isolation Forest"]
-  S -->|yes| D{"Data type?"}
-  D -->|tabular| T{"Must explain?"}
+  S -->|yes| D{{"Data type?"}}
+  D -->|tabular| T{{"Must explain?"}}
   T -->|yes| L["Linear, logistic, or one tree"]
   T -->|no| G["Gradient boosting"]
   D -->|images| C["Pretrained CNN, fine-tune"]
@@ -993,7 +1022,7 @@ flowchart LR
   <aside class="notes">This is a starting point, not a law. Always start with the simplest baseline and only add complexity when validation metrics justify it. Note how often "pretrained" appears on the deep-learning side; in industry you rarely train big models from scratch.</aside>
 </section>
 
-<section class="slide" data-section="core" data-label="Putting It Together" data-min="1.5">
+<section class="slide" data-section="core" data-label="Putting It Together" data-min="1.25">
   <h2>HomeScope <span class="k">end-to-end</span></h2>
 <pre class="mermaid mm">
 flowchart LR
@@ -1001,24 +1030,22 @@ flowchart LR
   EV[("Clickstream")] --> FS
   PH[("Photos")] --> CN["CNN photo tagger"]
   CN --> FS
-  LD --> VI["Vector index"]
-  CN --> VI
+  CN --> VI["Vector index"]
+  LD --> VI
   FS --> GB["GBM price"]
-  FS --> FR["Fraud: classifier<br/>+ anomaly"]
-  VI --> RC["Two-tower<br/>recommender"]
-  VI --> LM["LLM assistant<br/>+ RAG"]
+  FS --> FR["Fraud model"]
+  VI --> RC["Recommender"]
+  VI --> LM["LLM + RAG"]
   GB --> API["HomeScope API"]
   FR --> API
   RC --> API
   LM --> API
-  LM -.->|tool call| GB
   API --> UI["Web and app"]
-  UI -.->|new events| EV
 </pre>
   <aside class="notes">Every model from today has a home here. Note the shared feature store, which keeps training and serving features consistent, and the vector index serving both recommendations and RAG. The dotted feedback loop from the UI back to the clickstream is where new training labels come from, and it's also where feedback bias can creep in.</aside>
 </section>
 
-<section class="slide" data-section="core" data-label="Putting It Together" data-min="1.5">
+<section class="slide" data-section="core" data-label="Putting It Together" data-min="1.25">
   <h2>MLOps <span class="k">essentials</span></h2>
   <div class="cols">
     <div class="col">
@@ -1035,7 +1062,7 @@ flowchart LR
 <pre class="mermaid mm">
 flowchart TD
   D["Deploy model v3"] --> M["Monitor<br/>inputs, outputs, errors"]
-  M --> Q{"Drift or<br/>metric drop?"}
+  M --> Q{{"Drift or<br/>metric drop?"}}
   Q -->|no| M
   Q -->|yes| R["Retrain on fresh data"]
   R --> V["Validate vs champion<br/>offline + A/B test"]
@@ -1047,8 +1074,105 @@ flowchart TD
   <aside class="notes">A model is a snapshot of the past; the world keeps moving. Track feature distributions (PSI, KS tests) and prediction distributions right away, because true sale prices arrive weeks later. Automate retraining, but gate every promotion on validation against the current champion. Version data, code and models together so you can roll back.</aside>
 </section>
 
+<!-- ============ 9b. CAPSTONE ============ -->
+<section class="slide" data-section="core" data-label="Capstone · Tumor Classifier" data-min="1.25">
+  <h2>Capstone: <span class="k">tumor classification</span>, end to end</h2>
+  <p class="from">From <span class="mono">projects/project_end_to_end_ai_foundation</span>: one real dataset, the whole pipeline</p>
+<pre class="mermaid mm" style="flex:0 0 250px">
+flowchart LR
+  A["Raw data<br/>569 rows × 30 features"] --> B["Split first<br/>70 / 15 / 15, stratified"] --> C["Scale<br/>fit on train only"] --> D["Train MLP<br/>early stopping"] --> E["Evaluate<br/>P, R, F1, ROC-AUC"] --> F["Inference<br/>eval + no_grad"]
+</pre>
+  <div class="cols" style="align-items:start">
+    <ul class="b">
+      <li><span class="ac">Data:</span> Breast Cancer Wisconsin (Diagnostic), built into scikit-learn</li>
+      <li><span class="ac">Features:</span> 30 measurements of cell nuclei (radius, texture, area…), computed from digitized FNA images</li>
+      <li><span class="ac">Label:</span> malignant (212) or benign (357)</li>
+    </ul>
+    <div class="hs"><svg class="ico"><use href="#house"/></svg><div><b>Why it's "production":</b> errors are not equal. Missing a malignant tumor costs far more than a false alarm, the same lesson as HomeScope fraud.</div></div>
+  </div>
+  <aside class="notes">This is the curriculum's capstone notebook, 01_end_to_end_pipeline.ipynb. Nothing in it is new; it wires every earlier topic together on one real dataset. The split is 398 train, 85 validation, 86 test, stratified so each split keeps the 37/63 class balance. The scaler is fit on the training split only, which avoids the leakage mistake from the pipeline slide. The next three slides show where classical ML and deep learning each fit in.</aside>
+</section>
+
+<section class="slide" data-section="core" data-label="Capstone · Tumor Classifier" data-min="1.25">
+  <h2>Where <span class="k">classical ML</span> helps</h2>
+  <div class="cols">
+    <div class="col">
+      <ul class="b">
+        <li><span class="ac">Logistic regression:</span> the baseline any network must beat; each weight reads as a risk factor</li>
+        <li><span class="ac">Random forest / gradient boosting:</span> strong on 30 tabular columns; feature importance shows which measurements matter</li>
+        <li><span class="ac">PCA:</span> radius, perimeter and area move together; 2 components give a 2-D view of class separation</li>
+        <li><span class="ac">kNN / SVM:</span> work well at this small size (569 rows) once features are scaled</li>
+      </ul>
+      <div class="hs"><svg class="ico"><use href="#house"/></svg><div><b>Rule from HomeScope:</b> on small tabular data, ship the simpler model unless the network clearly wins on validation.</div></div>
+    </div>
+    <div class="col viz">
+<pre class="mermaid mm">
+flowchart TD
+  X["30 scaled measurements"] --> L["Logistic<br/>regression"]
+  X --> G["Random forest<br/>or GBM"]
+  X --> M["MLP<br/>notebook model"]
+  L --> Q{{"MLP clearly better<br/>on validation?"}}
+  G --> Q
+  M --> Q
+  Q -->|yes| K["Ship the MLP"]
+  Q -->|no| S["Ship the simpler model"]
+</pre>
+    </div>
+  </div>
+  <aside class="notes">The notebook itself trains only the neural network. These classical models are the baselines you should run next to it in a real project, and they are cheap at 569 rows. Scaling matters for logistic regression, kNN, SVM and the MLP, but not for tree models. PCA is mainly a diagnostic here: if two components already separate the classes, a simple model will probably do. Use the same stratified split and the same metrics for every candidate so the comparison is fair.</aside>
+</section>
+
+<section class="slide" data-section="dl" data-label="Capstone · Tumor Classifier" data-min="1.25">
+  <h2>Where <span class="k">deep learning</span> helps: the MLP</h2>
+  <div class="cols">
+    <div class="col">
+      <ul class="b">
+        <li>Small network: 30 → 32 → 16 → 2, only <span class="hl">1,554 weights</span></li>
+        <li><span class="ac">ReLU</span> layers, <span class="ac">dropout 0.2</span> and <span class="ac">weight decay 1e-4</span> to cut variance</li>
+        <li>Cross-entropy loss, <span class="ac">Adam</span> (learning rate 0.001), batches of 32</li>
+        <li>Early stopping with patience 10: stopped at epoch 50, best validation loss 0.0508, best checkpoint saved</li>
+      </ul>
+      <div class="hs"><svg class="ico"><use href="#house"/></svg><div><b>Where DL really pays off:</b> a CNN could read the cell images directly instead of 30 hand-measured features, like HomeScope's photo tagger.</div></div>
+    </div>
+    <div class="col viz">
+<pre class="mermaid mm">
+flowchart TD
+  I["Input: 30 features"] --> H1["Linear 30 → 32<br/>ReLU, dropout 0.2"]
+  H1 --> H2["Linear 32 → 16<br/>ReLU"]
+  H2 --> O["Linear 16 → 2<br/>logits"]
+  O --> S["Softmax<br/>P(malignant), P(benign)"]
+  O -.->|"cross-entropy, backprop"| A["Adam update"]
+  A -.-> H1
+</pre>
+    </div>
+  </div>
+  <aside class="notes">Every piece here appeared earlier in the deck: the MLP, ReLU, backpropagation, Adam, and regularization through dropout and weight decay. 1,554 parameters is tiny; that's 992 plus 528 plus 34. Early stopping watches validation loss and keeps the best checkpoint, which is a cheap guard against overfitting. On 30 hand-crafted features a network has little edge over boosting. Deep learning earns its keep when it learns features from raw images or text.</aside>
+</section>
+
+<section class="slide" data-section="core" data-label="Capstone · Tumor Classifier" data-min="1.25">
+  <h2>Results, and what <span class="k">production</span> needs</h2>
+  <div class="cols">
+    <div class="col">
+      <table class="t" style="width:auto">
+        <tr><th>Test set (86 cases)</th><th>Score</th></tr>
+        <tr><td>Accuracy</td><td class="n">0.953</td></tr>
+        <tr><td>Precision · recall · F1 (benign)</td><td class="n">0.963</td></tr>
+        <tr><td>ROC-AUC</td><td class="n">0.993</td></tr>
+        <tr><td>Malignant recall (30 of 32)</td><td class="n">0.938</td></tr>
+      </table>
+      <ul class="b">
+        <li>One test case: <span class="hl">benign at 0.70 confidence, truly malignant</span></li>
+        <li>Lower the threshold for "malignant"; send uncertain cases to a pathologist</li>
+        <li>Monitor drift (new lab, new scanner), version data and checkpoints, keep a human in the loop</li>
+      </ul>
+    </div>
+    <div class="col viz"><div class="chart" data-chart="confmat"></div><p class="cap">Confusion matrix from the capstone notebook's test run (seed 42)</p></div>
+  </div>
+  <aside class="notes">These are the notebook's actual outputs for one run with seed 42 on 86 test cases, so treat them as indicative, not a guarantee. scikit-learn treats label 1, benign, as the positive class, so the reported precision and recall are for benign. The number that matters clinically is malignant recall: 30 of 32 caught, 2 missed. In production you would tune the decision threshold on validation data for high malignant recall, calibrate the probabilities, and route low-confidence predictions to a human, exactly the precision–recall trade-off from the classification metrics slide.</aside>
+</section>
+
 <!-- ============ 10. CLOSE ============ -->
-<section class="slide" data-section="core" data-label="Close" data-min="1.5">
+<section class="slide" data-section="core" data-label="Close" data-min="1.25">
   <h2>Key <span class="k">takeaways</span></h2>
   <div class="cols">
     <div class="col" style="gap:20px">
@@ -1066,7 +1190,7 @@ flowchart TD
   <aside class="notes">Leave people with these six one-liners. The meta-lesson: algorithms are tools with trade-offs, and the bias–variance and data-type questions tell you which to reach for. Point people to the curriculum notebooks for hands-on practice.</aside>
 </section>
 
-<section class="slide" data-section="core" data-label="Close" data-min="1.5">
+<section class="slide" data-section="core" data-label="Close" data-min="2.25" data-no-gloss>
   <h2>Q&amp;A <span class="k">+ references</span></h2>
   <div class="cols" style="font-size:20px;line-height:1.35">
     <ul class="b">
@@ -1133,6 +1257,19 @@ function polyfit(xs,ys,deg,lam){const X=xs.map(x=>Array.from({length:deg+1},(_,k
 const sig=z=>1/(1+Math.exp(-z));
 
 const CHARTS={
+  confmat(){const W=620,H=520,x0=170,y0=90,c=180;
+    const lab=[['Malignant','Benign'],['Malignant','Benign']];let b='';
+    b+=T(x0+c,40,'Predicted',C.muted,22,'text-anchor="middle" font-weight="600"');
+    b+=`<text transform="translate(34,${y0+c}) rotate(-90)" fill="${C.muted}" font-size="22" font-weight="600" text-anchor="middle">Actual</text>`;
+    lab[0].forEach((t,j)=>b+=T(x0+c*j+c/2,y0-14,t,C.text,21,'text-anchor="middle"'));
+    lab[1].forEach((t,i)=>b+=T(x0-12,y0+c*i+c/2+7,t,C.text,21,'text-anchor="end"'));
+    const v=[[30,2],[2,52]],note=[['caught','missed'],['false alarm','correct']];
+    v.forEach((r,i)=>r.forEach((n,j)=>{const ok=i===j,f=ok?'#0E7490':'#B45309',sx=x0+c*j,sy=y0+c*i;
+      b+=`<rect x="${sx+4}" y="${sy+4}" width="${c-8}" height="${c-8}" rx="14" fill="${f}" stroke="${ok?'#67E8F9':'#FCD34D'}" stroke-width="2"/>`;
+      b+=T(sx+c/2,sy+c/2+10,n,'#FFFFFF',56,'text-anchor="middle" font-weight="700"');
+      b+=T(sx+c/2,sy+c/2+48,note[i][j],'#FFFFFF',20,'text-anchor="middle"')}));
+    b+=T(x0+c,y0+2*c+50,'2 malignant tumors missed → tune the threshold',C.am,21,'text-anchor="middle" font-weight="700"');
+    return svgWrap(W,H,b)},
 hero(){const s=[];const r=rng(7);
   s.push(`<path d="M80 250 L300 70 L520 250" fill="none" stroke="${C.am}" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>`);
   s.push(`<path d="M120 225 V470 H480 V225" fill="none" stroke="${C.am}" stroke-width="10" stroke-linejoin="round"/>`);
@@ -1179,11 +1316,11 @@ poly(){const r=rng(5),xs=[],ys=[];for(let i=0;i<12;i++){const x=.2+i*.42+(r()-.5
   p.pts(xs.map((x,i)=>[x,ys[i]]),C.text,6);
   p.text(.15,3.0,'degree 1: underfit',C.dim,'font-size="20"').text(.15,2.65,'degree 9: overfit',C.am,'font-size="20" font-weight="700"').text(.15,2.3,'degree 9 + Ridge',C.cy,'font-size="20" font-weight="700"');return p.svg()},
 
-resid(){const e=[['Home A',-20],['Home B',20],['Home C',50],['Home D',-10]],p=new P(700,330,[0,4],[-30,60],{l:80,b:50});
+resid(){const e=[['Home A',-20],['Home B',20],['Home C',50],['Home D',-10]],p=new P(700,360,[0,4],[-50,60],{l:80,b:20});
   p.line(0,0,4,0,C.dim,2);e.forEach(([n,v],i)=>{const x0=p.X(i+.25),x1=p.X(i+.75),y0=p.Y(0),y1=p.Y(v);
     p.add(`<rect x="${x0}" y="${Math.min(y0,y1)}" width="${x1-x0}" height="${Math.abs(y1-y0)}" rx="5" fill="${v===50?C.am:C.indS}"/>`);
-    p.text(i+.5,v>0?v+4:v-10,(v>0?'+':'')+v,C.text,'text-anchor="middle" font-weight="700"').text(i+.5,-28,n,C.muted,'text-anchor="middle" font-size="20"')});
-  p.add(`<text transform="translate(28,150) rotate(-90)" fill="${C.muted}" font-size="22" text-anchor="middle">error y − ŷ ($k)</text>`);return p.svg()},
+    p.text(i+.5,v>0?v+4:v-9,(v>0?'+':'')+v,C.text,'text-anchor="middle" font-weight="700"').text(i+.5,-45,n,C.muted,'text-anchor="middle" font-size="20"')});
+  p.add(`<text transform="translate(28,170) rotate(-90)" fill="${C.muted}" font-size="22" text-anchor="middle">error y − ŷ ($k)</text>`);return p.svg()},
 
 sigmoid(){const r=rng(3),p=new P(700,430,[-6,6],[-.12,1.12]);p.axes('z = wᵀx + b','P(sells ≤ 30 days)');
   p.line(-6,.5,6,.5,C.dim,2,'stroke-dasharray="6 6"').line(0,-.1,0,1.1,C.dim,2,'stroke-dasharray="6 6"');
@@ -1246,7 +1383,7 @@ pca(){const r=rng(12),X=[];for(let i=0;i<70;i++){const s=gauss(r);X.push([s,.85*
   X.slice(0,10).forEach(([x,y])=>{const t=(x-mx)*u[0]+(y-my)*u[1];p.line(x,y,mx+t*u[0],my+t*u[1],C.am,1.5,'opacity=".8"')});
   p.pts(X,C.ind,6,'fill-opacity=".85"');const L1=2*Math.sqrt(l1),L2=2*Math.sqrt(l2);
   p.line(mx,my,mx+u[0]*L1,my+u[1]*L1,C.am,5,'marker-end="url(#ah)"').line(mx,my,mx+u2[0]*L2,my+u2[1]*L2,C.cy,5,'marker-end="url(#ah2)"');
-  p.text(mx+u[0]*L1+.1,my+u[1]*L1-.1,`PC1: ${(100*l1/(l1+l2)).toFixed(0)}% variance`,C.am,'font-weight="700"').text(mx+u2[0]*L2-2.4,my+u2[1]*L2+.25,'PC2',C.cy,'font-weight="700"');return p.svg()},
+  p.text(mx+u[0]*L1-.1,my+u[1]*L1+.35,`PC1: ${(100*l1/(l1+l2)).toFixed(0)}% variance`,C.am,'font-weight="700" text-anchor="end"').text(mx+u2[0]*L2-2.4,my+u2[1]*L2+.25,'PC2',C.cy,'font-weight="700"');return p.svg()},
 
 anomaly(){const r=rng(31),X=[];for(let i=0;i<90;i++){const s=1+r()*3;X.push([s,320-18*s+gauss(r)*38])}const O=[[3.4,90],[2.6,640],[1.3,95],[3.9,560]],all=X.concat(O);
   const n=X.length,mx=X.reduce((a,x)=>a+x[0],0)/n,my=X.reduce((a,x)=>a+x[1],0)/n,sa=X.reduce((s,x)=>s+(x[0]-mx)**2,0)/n,sd=X.reduce((s,x)=>s+(x[1]-my)**2,0)/n,sb=X.reduce((s,x)=>s+(x[0]-mx)*(x[1]-my),0)/n,det=sa*sd-sb*sb;
@@ -1320,6 +1457,66 @@ emb(){const P_={loft:[1,3.5],condo:[1.5,2.9],studio:[.6,2.7],apartment:[1.7,3.8]
   p.text(.25,4.45,'→ query: "cozy retreat by the water"',C.am,'font-weight="700" font-size="20"');
   p.text(.25,5.25,`cos(query, lake cottage) = ${cos(q,P_['lake cottage']).toFixed(2)}`,C.cy,'font-weight="700" font-size="20"').text(.25,4.85,`cos(query, condo) = ${cos(q,P_.condo).toFixed(2)}`,C.ind,'font-weight="700" font-size="20"');return p.svg()}
 };
+/* ---------- abbreviation glossary: brief definitions on every slide that uses a short form ---------- */
+const ABBR=[
+ ['AI','AI','Artificial Intelligence',1],['ML','ML','Machine Learning: models that learn patterns from data',1],
+ ['DL','DL','Deep Learning: many-layer neural networks',1],['GenAI','GenAI','Generative AI: models that create text, images, code',1],
+ ['GPUs?','GPU','Graphics Processing Unit: chip for fast parallel math',1],['CPU','CPU','Central Processing Unit',1],
+ ['API','API','Application Programming Interface: how apps call a service',1],
+ ['MSE','MSE','Mean Squared Error: average of squared misses'],['MAE','MAE','Mean Absolute Error: average size of a miss, in $'],
+ ['RMSE','RMSE','Root Mean Squared Error: √MSE, punishes big misses'],['R²|R\\^2','R²','R-squared: share of variance explained (1 = perfect)'],
+ ['GD','GD','Gradient Descent: repeated small steps downhill on the loss'],['SGD','SGD','Stochastic Gradient Descent: steps on small random batches'],
+ ['BCE','BCE','Binary Cross-Entropy: log loss for yes/no predictions'],
+ ['[kK]NN','kNN','k-Nearest Neighbors: predict from the k most similar examples'],
+ ['TF-IDF|IDF','TF-IDF','Term Frequency–Inverse Document Frequency: word weight, frequent here but rare elsewhere'],
+ ['CART','CART','Classification And Regression Trees: the classic tree-growing algorithm'],
+ ['GBM','GBM','Gradient Boosting Machine: trees added one by one to fix earlier errors'],
+ ['XGBoost','XGBoost','eXtreme Gradient Boosting: a popular boosting library'],['LightGBM','LightGBM','Light Gradient Boosting Machine: Microsoft\'s fast boosting library'],
+ ['LambdaMART','LambdaMART','boosted trees trained to rank results'],
+ ['SVM','SVM','Support Vector Machine: boundary with the widest margin'],
+ ['TP|FP|FN|TN','TP/FP/FN/TN','True/False Positive/Negative: the four confusion-matrix cells'],
+ ['TPR','TPR','True Positive Rate (= recall): share of real positives caught'],['FPR','FPR','False Positive Rate: share of negatives wrongly flagged'],
+ ['ROC','ROC','Receiver Operating Characteristic: TPR vs. FPR at every threshold'],['AUC','AUC','Area Under the ROC Curve: 1 = perfect ranking, 0.5 = coin flip'],
+ ['F_?1','F1','harmonic mean of precision and recall'],
+ ['DBSCAN','DBSCAN','Density-Based Spatial Clustering of Applications with Noise: groups dense regions, flags sparse points'],
+ ['PCA','PCA','Principal Component Analysis: compress features onto the directions of greatest variance'],
+ ['MF','MF','Matrix Factorization: rating ≈ user vector · item vector'],
+ ['CTR','CTR','Click-Through Rate: share of impressions that get clicked'],['Recall@\\d+|Recall@K','Recall@K','share of relevant items that appear in the top K'],
+ ['ARIMA','ARIMA','AutoRegressive Integrated Moving Average: classic time-series model'],
+ ['MLP','MLP','Multi-Layer Perceptron: stacked fully connected layers'],['ReLU','ReLU','Rectified Linear Unit: max(0, z)'],
+ ['GELU','GELU','Gaussian Error Linear Unit: a smooth ReLU'],['Adam','Adam','Adaptive Moment Estimation: per-weight adaptive step sizes'],
+ ['AdamW','AdamW','Adam with decoupled weight decay'],['XOR','XOR','exclusive OR: true when exactly one input is true'],
+ ['CNNs?','CNN','Convolutional Neural Network: learns sliding image filters'],
+ ['ILSVRC','ILSVRC','ImageNet Large Scale Visual Recognition Challenge'],['ResNet','ResNet','Residual Network: skip connections make very deep CNNs trainable'],
+ ['RNN','RNN','Recurrent Neural Network: carries a hidden state through a sequence'],
+ ['LSTMs?','LSTM','Long Short-Term Memory: an RNN with gates that keep long-range memory'],
+ ['QK','Q, K, V','Query, Key, Value vectors used by attention'],
+ ['MHA|MultiHead','MHA','Multi-Head Attention: several attention patterns in parallel'],['LayerNorm','LayerNorm','Layer Normalization: rescales activations for stable training'],
+ ['BERT','BERT','Bidirectional Encoder Representations from Transformers'],['GPT','GPT','Generative Pre-trained Transformer'],
+ ['AE','AE','Autoencoder: compress, then reconstruct'],['GANs?','GAN','Generative Adversarial Network: generator vs. discriminator'],
+ ['DDPM','DDPM','Denoising Diffusion Probabilistic Model: learns to remove noise step by step'],
+ ['SFT','SFT','Supervised Fine-Tuning: train on curated prompt → answer pairs'],
+ ['RLHF','RLHF','Reinforcement Learning from Human Feedback: tune toward answers people prefer'],['RL','RL','Reinforcement Learning'],
+ ['KL','KL','Kullback–Leibler divergence: how far one distribution is from another'],['HOA','HOA','Homeowners Association'],
+ ['RAG','RAG','Retrieval-Augmented Generation: fetch relevant documents, then answer from them'],
+ ['LLMs?','LLM','Large Language Model: a Transformer trained to predict the next token'],
+ ['FAISS','FAISS','Facebook AI Similarity Search: fast nearest-neighbor search library'],
+ ['PSI','PSI','Population Stability Index: drift score comparing two distributions'],
+ ['MLOps','MLOps','ML Operations: deploying, monitoring and retraining models'],['DNN','DNN','Deep Neural Network'],
+ ['FNA','FNA','Fine-Needle Aspirate: cells drawn from a lump with a thin needle']];
+(function(){const seen=new Set();
+  document.querySelectorAll('.slide').forEach(sl=>{if(sl.classList.contains('title-slide')||sl.dataset.noGloss!==undefined)return;
+    const cl=sl.cloneNode(true);cl.querySelectorAll('aside.notes,.gloss,.cap,.from').forEach(e=>e.remove());
+    cl.querySelectorAll('pre.mermaid').forEach(p=>{const src=p.textContent;
+      if(/^\s*(flowchart|graph)/.test(src)){const parts=[];src.replace(/"([^"]*)"|\|([^|]*)\||\[([^\]"]*)\]|\{([^}"]*)\}/g,(m,a,b,c,d)=>{parts.push(a||b||c||d||'')});p.textContent=parts.join(' ')}});
+    const txt=cl.innerHTML.replace(/<[^>]+>/g,' ').replace(/&amp;/g,'&');const hits=[];
+    ABBR.forEach(([re,name,def,once])=>{if(once&&seen.has(name))return;
+      if(new RegExp('(^|[^A-Za-z0-9_])(?:'+re+')(?![A-Za-z0-9])').test(txt)){hits.push([name,def]);if(once)seen.add(name)}});
+    if(!hits.length)return;
+    const g=document.createElement('div');g.className='gloss';
+    g.innerHTML=hits.map(([n,d])=>`<span><b>${n}</b> ${d}</span>`).join(' ');
+    const notesEl=sl.querySelector('aside.notes');sl.insertBefore(g,notesEl)});
+})();
 document.querySelectorAll('.chart[data-chart]').forEach(el=>{try{el.innerHTML=CHARTS[el.dataset.chart]()}catch(e){console.error('chart',el.dataset.chart,e)}});
 
 /* ---------- navigation ---------- */
@@ -1350,27 +1547,35 @@ fit();go((parseInt(location.hash.slice(1),10)||1)-1);
 </script>
 <script type="module">
 import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs';
-const dark=['#312E81','#164E63','#78350F','#1E3A8A','#155E75','#713F12','#3730A3','#0E7490','#92400E','#1E293B','#334155','#4338CA'];
+const dark=['#4338CA','#0E7490','#B45309','#047857','#BE123C','#6D28D9','#1D4ED8','#0F766E','#A16207','#15803D','#9F1239','#7C3AED'];
+const PAL=[['#3730A3','#A5B4FC'],['#0E7490','#67E8F9'],['#B45309','#FCD34D'],['#047857','#6EE7B7'],['#BE123C','#FDA4AF'],['#6D28D9','#C4B5FD']];
 const tv={darkMode:true,background:'#0F172A',fontFamily:'Inter, Segoe UI, system-ui, sans-serif',fontSize:'20px',
   primaryColor:'#1E293B',primaryTextColor:'#F1F5F9',primaryBorderColor:'#6366F1',secondaryColor:'#1E293B',secondaryTextColor:'#F1F5F9',secondaryBorderColor:'#22D3EE',
   tertiaryColor:'#131D33',tertiaryTextColor:'#F1F5F9',tertiaryBorderColor:'#475569',lineColor:'#94A3B8',textColor:'#F1F5F9',mainBkg:'#1E293B',nodeBorder:'#6366F1',
-  nodeTextColor:'#F1F5F9',clusterBkg:'#131D33',clusterBorder:'#475569',titleColor:'#F1F5F9',edgeLabelBackground:'#0F172A',
-  actorBkg:'#1E293B',actorBorder:'#6366F1',actorTextColor:'#F1F5F9',actorLineColor:'#64748B',signalColor:'#CBD5E1',signalTextColor:'#F1F5F9',
-  labelBoxBkgColor:'#1E293B',labelBoxBorderColor:'#6366F1',labelTextColor:'#F1F5F9',loopTextColor:'#F1F5F9',noteBkgColor:'#422006',noteTextColor:'#F1F5F9',noteBorderColor:'#F59E0B',
+  nodeTextColor:'#F1F5F9',clusterBkg:'#172554',clusterBorder:'#60A5FA',titleColor:'#F1F5F9',edgeLabelBackground:'#0F172A',
+  actorBkg:'#3730A3',actorBorder:'#A5B4FC',actorTextColor:'#F1F5F9',actorLineColor:'#64748B',signalColor:'#CBD5E1',signalTextColor:'#F1F5F9',
+  labelBoxBkgColor:'#0E7490',labelBoxBorderColor:'#6366F1',labelTextColor:'#F1F5F9',loopTextColor:'#F1F5F9',noteBkgColor:'#422006',noteTextColor:'#F1F5F9',noteBorderColor:'#F59E0B',
   activationBkgColor:'#334155',activationBorderColor:'#94A3B8',
-  quadrant1Fill:'#1E1B4B',quadrant2Fill:'#172033',quadrant3Fill:'#1E293B',quadrant4Fill:'#3B2410',
+  quadrant1Fill:'#312E81',quadrant2Fill:'#164E63',quadrant3Fill:'#1E293B',quadrant4Fill:'#78350F',
   quadrant1TextFill:'#F1F5F9',quadrant2TextFill:'#F1F5F9',quadrant3TextFill:'#F1F5F9',quadrant4TextFill:'#F1F5F9',
   quadrantPointFill:'#F59E0B',quadrantPointTextFill:'#F1F5F9',quadrantXAxisTextFill:'#F1F5F9',quadrantYAxisTextFill:'#F1F5F9',quadrantTitleFill:'#F1F5F9',
   quadrantInternalBorderStrokeFill:'#475569',quadrantExternalBorderStrokeFill:'#64748B'};
 dark.forEach((c,i)=>{tv['cScale'+i]=c;tv['cScaleLabel'+i]='#F1F5F9';tv['cScalePeer'+i]='#94A3B8'});
-mermaid.initialize({startOnLoad:false,theme:'base',themeVariables:tv,securityLevel:'strict',
-  flowchart:{curve:'basis',htmlLabels:true,useMaxWidth:true,padding:14,nodeSpacing:36,rankSpacing:46},
-  sequence:{useMaxWidth:true,mirrorActors:false,messageFontSize:20,actorFontSize:20,actorMargin:40,width:130,boxMargin:8,messageMargin:36},
+mermaid.initialize({startOnLoad:false,theme:'base',themeVariables:tv,securityLevel:'strict',htmlLabels:false,
+  flowchart:{curve:'basis',htmlLabels:false,useMaxWidth:true,padding:12,nodeSpacing:26,rankSpacing:34},
+  sequence:{useMaxWidth:true,mirrorActors:false,messageFontSize:20,actorFontSize:22,actorMargin:24,width:110,boxMargin:8,messageMargin:36},
   quadrantChart:{chartWidth:620,chartHeight:520,pointLabelFontSize:20,quadrantLabelFontSize:20,xAxisLabelFontSize:20,yAxisLabelFontSize:20,titleFontSize:22},
   timeline:{useMaxWidth:true},mindmap:{useMaxWidth:true}});
-let chain=Promise.resolve();
+// Mermaid sizes boxes from the text it measures, so wait for the web fonts first (else labels get clipped)
+const fontsReady=Promise.race([Promise.all(['400 20px Inter','600 20px Inter','500 20px "Space Grotesk"'].map(f=>document.fonts.load(f))).then(()=>document.fonts.ready),
+  new Promise(r=>setTimeout(r,4000))]).catch(()=>{});
+function colorize(pre){if(!/^\s*(flowchart|graph)/.test(pre.dataset.src||''))return;
+  pre.querySelectorAll('g.node').forEach((g,i)=>{const [f,st]=PAL[i%PAL.length];
+    g.querySelectorAll(':scope>rect,:scope>polygon,:scope>circle,:scope>path,:scope>g>path,:scope>g>rect').forEach(sh=>{sh.style.fill=f;sh.style.stroke=st;sh.style.strokeWidth='2px'})})}
+document.querySelectorAll('pre.mermaid').forEach(p=>p.dataset.src=p.textContent);
+let chain=fontsReady.then(()=>{});
 window.renderMermaidIn=slide=>{chain=chain.then(async()=>{const nodes=[...slide.querySelectorAll('pre.mermaid:not([data-processed])')];
-  if(nodes.length){try{await mermaid.run({nodes})}catch(e){console.error('mermaid',e)}}});return chain};
+  if(nodes.length){try{await mermaid.run({nodes})}catch(e){console.error('mermaid',e)}nodes.forEach(colorize)}});return chain};
 window.renderMermaidIn(document.querySelector('.slide.active'));
 </script>
 </body>
