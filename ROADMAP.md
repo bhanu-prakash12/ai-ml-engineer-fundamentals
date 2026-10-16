@@ -3,15 +3,15 @@
 ```mermaid
 flowchart LR
   subgraph Day1["Day 1 — Python + Data + Math"]
-    P[01_python] --> N[02_numpy] --> DL[03_data_libraries] --> DS[04_datasets] --> M[05_ml_mathematics]
+    P["01_python"] --> N["02_numpy"] --> DL["03_data_libraries"] --> DS["04_datasets"] --> M["05_ml_mathematics"]
   end
   subgraph Day2["Day 2 — Machine Learning"]
-    F[ML fundamentals] --> R[Regression] --> C[Classification] --> U[Unsupervised] --> O[Optimization] --> G[Generalization] --> EV[Evaluation] --> FE[Feature eng.] --> HT[Hyperparameter tuning]
+    F["ML fundamentals"] --> R["Regression"] --> C["Classification"] --> U["Unsupervised"] --> O["Optimization"] --> G["Generalization"] --> EV["Evaluation"] --> FE["Feature eng."] --> HT["Hyperparameter tuning"]
   end
   subgraph Day3["Day 3 — Deep Learning + PyTorch"]
-    DLB[DL basics] --> BP[Backprop] --> ARCH[Architectures/Transformer] --> PT[PyTorch tensors/autograd/nn] --> TR[Training loop] --> PERF[Performance] --> HF[HF foundations]
+    DLB["DL basics"] --> BP["Backprop"] --> ARCH["Architectures/Transformer"] --> PT["PyTorch tensors/autograd/nn"] --> TR["Training loop"] --> PERF["Performance"] --> HF["HF foundations"]
   end
-  Day1 --> Day2 --> Day3 --> Next[Transformers → LLMs → RAG → Fine-tuning → Inference engineering]
+  Day1 --> Day2 --> Day3 --> Next["Transformers → LLMs → RAG → Fine-tuning → Inference engineering"]
 ```
 
 ## Day 1 — Python + Data + Mathematics ✅

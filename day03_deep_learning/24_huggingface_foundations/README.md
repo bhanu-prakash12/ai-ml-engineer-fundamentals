@@ -1,5 +1,41 @@
 # 24 — Hugging Face Foundations
 
+> Hugging Face turns "load a pretrained language model and use it" into three calls: tokenizer, model, `generate()`.
+
+| | |
+|---|---|
+| **Day** | 3 — Deep Learning + PyTorch |
+| **Topic** | Tokenizers, `AutoModel`, `generate()`, LoRA concept |
+| **Notebooks** | 1 (`01_tokenizers_and_generation.ipynb`) |
+| **Builds on** | [`23_pytorch_performance`](../23_pytorch_performance/README.md), Day 1 `04_datasets`, [`17_deep_learning_architectures`](../17_deep_learning_architectures/README.md) |
+| **Leads to** | `llm-fine-tuning/` (LoRA, QLoRA, PEFT, inference) |
+
+## 📖 Short forms used in this topic
+
+| Term | Full form | What it is |
+|---|---|---|
+| HF | Hugging Face | Company and ecosystem behind `transformers`, `datasets`, `peft` |
+| LLM | Large Language Model | Very large Transformer trained on text |
+| LM | Language Model | Model that predicts the next token(s) of text |
+| GPT | Generative Pre-trained Transformer | Decoder-only causal LM family; the notebook uses a small GPT-style model |
+| ID / IDs | Identifier(s) | Integer indices of tokens in the vocabulary |
+| PEFT | Parameter-Efficient Fine-Tuning | Family of methods that train only a small number of extra or selected parameters |
+| LoRA | Low-Rank Adaptation | PEFT method: freeze base weights, learn small low-rank update matrices |
+| QLoRA | Quantized LoRA | LoRA on top of a quantized (e.g. 4-bit) frozen base model |
+| RAG | Retrieval-Augmented Generation | Feeding retrieved documents into a model's prompt (mentioned for context, not covered here) |
+| ML | Machine Learning | Learning from data |
+| AI | Artificial Intelligence | The broad field containing ML |
+| `AutoTokenizer` / `AutoModel` / `AutoModelForCausalLM` | Auto classes | Load the correct tokenizer or model class from a checkpoint's config |
+| `pt` | PyTorch | `return_tensors="pt"` returns PyTorch tensors |
+
+## 🧠 In plain words
+
+Models read numbers, not text. A tokenizer chops text into pieces and maps each to an integer ID; the model turns those IDs into predictions for the next token; `generate()` repeats that prediction in a loop to write text. Fine-tuning huge models fully is expensive, so LoRA trains only a tiny add-on instead.
+
+## 🎒 Analogy to remember
+
+A **translator with a phrasebook**: the tokenizer looks each piece of your sentence up in a fixed phrasebook (vocabulary) to get numbers, the model is the translator who predicts the next phrase, and `generate()` is them writing one phrase at a time, re-reading everything so far. LoRA is **adding sticky notes in the margins** of a published book rather than reprinting it. *Where it breaks down:* a phrasebook has meaning-based entries, while token pieces can be arbitrary sub-words.
+
 ## Learning objectives
 
 By the end of this topic you can:
@@ -33,12 +69,109 @@ the sibling library to the `transformers` library used here).
 
 ```mermaid
 flowchart LR
-  A[Raw text] --> B[AutoTokenizer: text -> token IDs + attention mask]
-  B --> C[AutoModelForCausalLM: token IDs -> next-token logits]
-  C --> D[generate: repeated next-token prediction, causal-masked]
-  D --> E[Decoded text]
-  F[datasets.Dataset] -->|.map tokenizer, batched=True| B
-  G[Full fine-tuning: update ALL weights] -.expensive.-> H[LoRA/PEFT: freeze base weights, train small low-rank adapters]
+  A["Raw text"] --> B["AutoTokenizer: text to token IDs + attention mask"]
+  B --> C["AutoModelForCausalLM: token IDs to next-token logits"]
+  C --> D["generate: repeated next-token prediction, causal-masked"]
+  D --> E["Decoded text"]
+  F["datasets.Dataset"] -->|"map tokenizer, batched=True"| B
+  G["Full fine-tuning: update ALL weights"] -.->|"expensive"| H["LoRA or PEFT: freeze base weights, train small low-rank adapters"]
+  classDef txt fill:#DBEAFE,stroke:#2563EB,color:#1a1a1a;
+  classDef mod fill:#DCFCE7,stroke:#16A34A,color:#1a1a1a;
+  classDef gen fill:#FEF3C7,stroke:#D97706,color:#1a1a1a;
+  classDef ft fill:#EDE9FE,stroke:#7C3AED,color:#1a1a1a;
+  classDef pricey fill:#FEE2E2,stroke:#DC2626,color:#1a1a1a;
+  class A,B,F txt;
+  class C mod;
+  class D,E gen;
+  class H ft;
+  class G pricey;
+```
+
+## 🔍 Concepts explained
+
+> [!NOTE]
+> Chips: 🟦 text to numbers · 🟩 model and generation · 🟧 data prep · 🟪 efficient fine-tuning.
+
+### 🟦 Tokenizer, token IDs, attention mask
+- **Definition**: the tokenizer splits text into sub-word tokens with a fixed vocabulary and returns IDs plus an attention mask (1 = real token, 0 = padding).
+- **Analogy**: the phrasebook lookup, plus a sheet marking which slots are blank.
+- **Code idea**: `tok(["hi", "a longer text"], return_tensors="pt", padding=True)` returns `input_ids` and `attention_mask`.
+- **Use when / watch out**: always use the tokenizer that matches the model; some tokenizers need a pad token set for batching.
+
+### 🟩 `AutoTokenizer` / `AutoModel` / `AutoModelForCausalLM`
+- **Definition**: Auto classes read the checkpoint's config and load the right classes.
+- **Code idea**: `AutoModelForCausalLM.from_pretrained(name)`.
+- **Use when / watch out**: `AutoModel` returns hidden states (no LM head); `AutoModelForCausalLM` adds the next-token head needed for generation.
+
+### 🟩 `generate()`
+- **Definition**: runs the autoregressive loop: predict a token, append it, repeat until a stop condition.
+- **Analogy**: writing one phrase at a time while re-reading the page.
+- **Code idea**: `model.generate(**inputs, max_new_tokens=20)`; then `tok.decode(...)`.
+- **Use when / watch out**: output includes the prompt tokens; decoding strategy (greedy, sampling) changes the text; set `max_new_tokens` to bound length.
+
+### 🟩 Model config
+- **Definition**: hyperparameters stored beside the weights (layers, hidden size, heads, vocab size).
+- **Use when / watch out**: read it via `model.config` to sanity-check size and architecture.
+
+### 🟧 Dataset preprocessing
+- **Definition**: `dataset.map(fn, batched=True)` applies the tokenizer across a Hugging Face `datasets.Dataset`.
+- **Use when / watch out**: `batched=True` is much faster than per-row mapping.
+
+### 🟪 PEFT / LoRA
+- **Definition**: freeze the pretrained weights `W`; learn a low-rank update `ΔW = B·A` (rank `r` much smaller than the layer size) and train only `A` and `B`.
+- **Analogy**: margin sticky notes on a printed book.
+- **Formula idea**: parameters per adapted layer `r·(d_in + d_out)` versus `d_in·d_out` for full tuning.
+- **Use when / watch out**: cheap fine-tuning that often nearly matches full fine-tuning; this topic is concept-only, details in `llm-fine-tuning/02_lora_qlora_peft`.
+
+### Differences at a glance
+
+| | Class | Output | Use for |
+|---|---|---|---|
+| 🟦 | `AutoTokenizer` | `input_ids`, `attention_mask` | Text to model inputs |
+| 🟩 | `AutoModel` | Hidden states | Embeddings and features |
+| 🟩 | `AutoModelForCausalLM` | Next-token logits, supports `generate()` | Text generation |
+
+| | Approach | Trains | Memory and cost | Typical quality |
+|---|---|---|---|---|
+| 🟥 | Full fine-tuning | All weights | High | Best baseline |
+| 🟪 | LoRA (PEFT) | Small adapter matrices | Low | Often close to full |
+| 🟪 | QLoRA | Adapters over a quantized base | Lowest | Often close to LoRA |
+
+> [!IMPORTANT]
+> The attention mask is not optional on padded batches: without it, padding tokens influence the output.
+
+> [!TIP]
+> Start with a small, CPU-friendly checkpoint when learning; the API is identical to the large ones.
+
+### 🗺️ Concept map
+
+```mermaid
+flowchart LR
+  subgraph IN["Text to numbers"]
+    TK["AutoTokenizer"] --> ID["input_ids + attention_mask"]
+  end
+  subgraph MODEL["Model"]
+    LM["AutoModelForCausalLM"] --> LG["next-token logits"]
+    CF["config"]
+  end
+  subgraph OUT["Generation"]
+    GN["generate loop"] --> DC["decode to text"]
+  end
+  subgraph FT["Fine-tuning"]
+    FF["Full: all weights"]
+    LO["LoRA: small adapters"]
+  end
+  ID --> LM
+  LG --> GN
+  LM -.->|"cheaper to adapt"| LO
+  classDef inp fill:#DBEAFE,stroke:#2563EB,color:#1a1a1a;
+  classDef mod fill:#DCFCE7,stroke:#16A34A,color:#1a1a1a;
+  classDef gen fill:#FEF3C7,stroke:#D97706,color:#1a1a1a;
+  classDef ft fill:#EDE9FE,stroke:#7C3AED,color:#1a1a1a;
+  class TK,ID inp;
+  class LM,LG,CF mod;
+  class GN,DC gen;
+  class FF,LO ft;
 ```
 
 ## Important APIs / functions

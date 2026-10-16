@@ -1,5 +1,37 @@
 # 21 — PyTorch Data: `Dataset` and `DataLoader`
 
+> `Dataset` says how to get one sample; `DataLoader` turns samples into shuffled, parallel-loaded batches.
+
+| | |
+|---|---|
+| **Day** | 3 — Deep Learning + PyTorch |
+| **Topic** | `Dataset`, `IterableDataset`, `DataLoader`, `collate_fn` |
+| **Notebooks** | 1 (`01_dataset_and_dataloader.ipynb`) |
+| **Builds on** | [`20_pytorch_models`](../20_pytorch_models/README.md), Day 1 `01_python`, `04_datasets` |
+| **Leads to** | [`22_pytorch_training`](../22_pytorch_training/README.md) |
+
+## 📖 Short forms used in this topic
+
+| Term | Full form | What it is |
+|---|---|---|
+| GIL | Global Interpreter Lock | CPython lock letting one thread run Python bytecode at a time; why workers are processes |
+| CPU | Central Processing Unit | Does data loading and preprocessing |
+| GPU | Graphics Processing Unit | Trains on batches; should not wait on data |
+| CPython | C implementation of Python | The standard Python interpreter that has the GIL |
+| `__len__`, `__getitem__`, `__iter__` | Python magic (dunder) methods | The protocol methods a `Dataset` or `IterableDataset` implements |
+| `num_workers` | Number of worker processes | `DataLoader` argument for parallel loading |
+| `pin_memory` | Page-locked memory flag | Speeds CPU to GPU copies |
+| `collate_fn` | Collate function | Function that merges a list of samples into one batch |
+| SGD | Stochastic Gradient Descent | Optimizer that benefits from shuffled batches |
+
+## 🧠 In plain words
+
+Training consumes data in small batches. A `Dataset` knows how to hand you sample number `i`; a `DataLoader` repeatedly picks samples, stacks them into a batch tensor, shuffles every epoch, and can do the loading in background processes so the GPU never waits.
+
+## 🎒 Analogy to remember
+
+A **restaurant kitchen**: the `Dataset` is the pantry with labelled shelves (get item `i`), the `DataLoader` is the prep team that grabs ingredients, bundles them into trays (batches), and mixes the order each night (shuffle). `num_workers` are extra prep cooks working in parallel so the chef (GPU) never waits; `collate_fn` is how trays of oddly sized items get packed. *Where it breaks down:* prep cooks are separate processes with their own memory, not shared hands.
+
 ## Learning objectives
 
 By the end of this topic you can:
@@ -34,12 +66,99 @@ a different but related abstraction).
 
 ```mermaid
 flowchart LR
-  A[Dataset: __len__ + __getitem__] --> B[DataLoader]
-  C[IterableDataset: __iter__] --> B
-  B --> D[Batching + shuffling]
-  D --> E[num_workers: parallel loading via separate PROCESSES]
-  E --> F[collate_fn: assemble a batch, possibly variable-length]
-  F --> G[Batch tensor, ready for model forward pass]
+  A["Dataset: __len__ + __getitem__"] --> B["DataLoader"]
+  C["IterableDataset: __iter__"] --> B
+  B --> D["Batching + shuffling"]
+  D --> E["num_workers: parallel loading via separate PROCESSES"]
+  E --> F["collate_fn: assemble a batch, possibly variable-length"]
+  F --> G["Batch tensor, ready for model forward pass"]
+  classDef src fill:#DBEAFE,stroke:#2563EB,color:#1a1a1a;
+  classDef load fill:#DCFCE7,stroke:#16A34A,color:#1a1a1a;
+  classDef perf fill:#FEF3C7,stroke:#D97706,color:#1a1a1a;
+  classDef out fill:#EDE9FE,stroke:#7C3AED,color:#1a1a1a;
+  class A,C src;
+  class B,D load;
+  class E perf;
+  class F,G out;
+```
+
+## 🔍 Concepts explained
+
+> [!NOTE]
+> Chips: 🟦 data sources · 🟩 loader features · 🟧 performance knobs · 🟥 pitfalls.
+
+### 🟦 `Dataset` (map-style)
+- **Definition**: implements `__len__` and `__getitem__(i)`; random access by index.
+- **Analogy**: a pantry with numbered shelves.
+- **Code idea**: `def __getitem__(self, i): return self.x[i], self.y[i]`.
+- **Use when / watch out**: data fits an index (arrays, files list); keep `__getitem__` cheap or push heavy work into workers.
+
+### 🟦 `IterableDataset`
+- **Definition**: implements `__iter__`; data is streamed, with no random access or `len`.
+- **Analogy**: a conveyor belt versus a shelf.
+- **Use when / watch out**: huge or generated data; `shuffle=True` is not supported with it, and with multiple workers each worker must handle its own shard or you get duplicates.
+
+### 🟩 `DataLoader`, batching, shuffle
+- **Definition**: wraps a dataset to yield batches; `shuffle=True` reorders each epoch.
+- **Analogy**: the prep team making trays.
+- **Code idea**: `DataLoader(ds, batch_size=32, shuffle=True)`.
+- **Use when / watch out**: shuffle training data, not validation data.
+
+### 🟩 `collate_fn`
+- **Definition**: turns a list of samples into a batch; the default stacks equal-shaped tensors.
+- **Analogy**: a packer who pads short boxes to fit the tray.
+- **Use when / watch out**: variable-length sequences need a custom `collate_fn` (pad to the longest, return lengths or a mask).
+
+### 🟧 `num_workers` and `pin_memory`
+- **Definition**: `num_workers=N` loads in N background processes; `pin_memory=True` uses page-locked memory for faster host-to-GPU copies.
+- **Analogy**: extra prep cooks; a loading dock right next to the chef.
+- **Use when / watch out**: processes (not threads) because of the GIL; more workers cost RAM and startup time, and gains vanish if loading is already trivial.
+
+### Differences at a glance
+
+| | Aspect | `Dataset` (map-style) | `IterableDataset` |
+|---|---|---|---|
+| 🟦 | Methods | `__len__`, `__getitem__` | `__iter__` |
+| 🟦 | Random access / `len` | Yes | No |
+| 🟩 | `shuffle=True` | Supported | Not supported; shuffle in the stream |
+| 🟧 | Multi-worker | Indices split automatically | You must shard yourself |
+| 🟦 | Typical use | Arrays, image folders | Streams, huge or generated data |
+
+> [!WARNING]
+> If the model sees `RuntimeError: stack expects each tensor to be equal size`, your samples differ in length. Write a `collate_fn` that pads.
+
+> [!TIP]
+> GPU utilization low? Try raising `num_workers` and setting `pin_memory=True` on CUDA before touching the model (see `23_pytorch_performance`).
+
+### 🗺️ Concept map
+
+```mermaid
+flowchart LR
+  subgraph SRC["Sources"]
+    DS["Dataset: index access"]
+    IDS["IterableDataset: stream"]
+  end
+  subgraph LOAD["DataLoader features"]
+    BT["Batching"]
+    SH["Shuffle"]
+    CF["collate_fn"]
+  end
+  subgraph PERF["Performance"]
+    NW["num_workers: processes"]
+    PM["pin_memory"]
+  end
+  DS --> BT
+  IDS --> BT
+  BT --> SH --> CF
+  CF --> NW --> PM --> OUT["Batch to model"]
+  classDef src fill:#DBEAFE,stroke:#2563EB,color:#1a1a1a;
+  classDef load fill:#DCFCE7,stroke:#16A34A,color:#1a1a1a;
+  classDef perf fill:#FEF3C7,stroke:#D97706,color:#1a1a1a;
+  classDef out fill:#EDE9FE,stroke:#7C3AED,color:#1a1a1a;
+  class DS,IDS src;
+  class BT,SH,CF load;
+  class NW,PM perf;
+  class OUT out;
 ```
 
 ## Important APIs / functions

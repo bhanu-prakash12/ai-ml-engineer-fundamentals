@@ -1,5 +1,44 @@
 # 23 — PyTorch Performance
 
+> Make training fit and go fast: lower precision for speed and memory, accumulation for big batches, clipping for stability, profiling to find the real bottleneck.
+
+| | |
+|---|---|
+| **Day** | 3 — Deep Learning + PyTorch |
+| **Topic** | Mixed precision, gradient accumulation and clipping, GPU memory, profiling |
+| **Notebooks** | 1 (`01_performance_techniques.ipynb`) |
+| **Builds on** | [`22_pytorch_training`](../22_pytorch_training/README.md) |
+| **Leads to** | [`24_huggingface_foundations`](../24_huggingface_foundations/README.md), `llm-fine-tuning/` |
+
+## 📖 Short forms used in this topic
+
+| Term | Full form | What it is |
+|---|---|---|
+| FP32 | 32-bit floating point (single precision) | PyTorch default: 1 sign, 8 exponent, 23 mantissa bits |
+| FP16 | 16-bit floating point (half precision) | 1 sign, 5 exponent, 10 mantissa bits; small range, can overflow or underflow |
+| BF16 | Brain Floating Point 16 | 16 bits with FP32's 8 exponent bits but only 7 mantissa bits; wide range, lower precision |
+| AMP | Automatic Mixed Precision | PyTorch's mixed-precision machinery (`torch.autocast`, `GradScaler`) |
+| `GradScaler` | Gradient scaler | Scales loss up to avoid FP16 gradient underflow, then unscales |
+| VRAM | Video RAM | Memory on the GPU |
+| GPU | Graphics Processing Unit | Parallel processor for matrix math |
+| CPU | Central Processing Unit | General-purpose processor |
+| CUDA | Compute Unified Device Architecture | NVIDIA GPU platform |
+| MPS | Metal Performance Shaders | Apple Silicon GPU backend |
+| NVIDIA | (company name) | GPU maker behind CUDA |
+| API | Application Programming Interface | The callable surface of a library |
+| MSE / `MSELoss` | Mean Squared Error | Regression loss used in the notebook's demos |
+| ReLU | Rectified Linear Unit | Activation `max(0, x)` |
+| KB | Kilobyte | Unit used when comparing tensor memory |
+| DataLoader | (PyTorch class) | Source of batches; can bottleneck the GPU |
+
+## 🧠 In plain words
+
+Once a model trains correctly, the next problems are "it doesn't fit in memory" and "it's too slow". Using 16-bit numbers halves memory and speeds up math; accumulating gradients over small batches imitates a big batch; clipping stops one bad batch from wrecking the weights; profiling tells you whether the GPU or the data loader is the slow part.
+
+## 🎒 Analogy to remember
+
+Moving house with a **small van**: shrink the boxes (mixed precision), make several trips before unpacking (gradient accumulation), put a limit on how hard any one lift can be (gradient clipping), and time each stage to find out whether loading the van or driving is the slow part (profiling). *Where it breaks down:* smaller boxes lose some detail (precision), which a house move doesn't.
+
 ## Learning objectives
 
 By the end of this topic you can:
@@ -33,11 +72,99 @@ simply doesn't fit.
 
 ```mermaid
 flowchart LR
-  A[FP32 default] --> B[FP16/BF16: half memory, faster on modern GPUs]
-  B --> C[Mixed precision: autocast + loss scaling]
-  D[Batch too large for memory] --> E[Gradient accumulation: micro-batches, fewer optimizer steps]
-  F[Unstable/exploding gradients] --> G[Gradient clipping: cap gradient norm]
-  H[GPU idle between batches] --> I[Profile: is the bottleneck data loading or compute?]
+  A["FP32 default"] --> B["FP16 or BF16: half memory, faster on modern GPUs"]
+  B --> C["Mixed precision: autocast + loss scaling"]
+  D["Batch too large for memory"] --> E["Gradient accumulation: micro-batches, fewer optimizer steps"]
+  F["Unstable or exploding gradients"] --> G["Gradient clipping: cap gradient norm"]
+  H["GPU idle between batches"] --> I["Profile: is the bottleneck data loading or compute?"]
+  classDef prec fill:#DBEAFE,stroke:#2563EB,color:#1a1a1a;
+  classDef mem fill:#DCFCE7,stroke:#16A34A,color:#1a1a1a;
+  classDef stab fill:#FEE2E2,stroke:#DC2626,color:#1a1a1a;
+  classDef meas fill:#FEF3C7,stroke:#D97706,color:#1a1a1a;
+  class A,B,C prec;
+  class D,E mem;
+  class F,G stab;
+  class H,I meas;
+```
+
+## 🔍 Concepts explained
+
+> [!NOTE]
+> Chips: 🟦 number formats · 🟩 memory tricks · 🟥 stability · 🟧 measurement.
+
+### 🟦 FP32 vs FP16 vs BF16
+
+| | Format | Bits (sign / exp / mantissa) | Range | Precision | Needs loss scaling? |
+|---|---|---|---|---|---|
+| 🟦 | FP32 | 1 / 8 / 23 | Wide | High | No |
+| 🟦 | FP16 | 1 / 5 / 10 | Narrow (overflow, underflow) | Medium | Yes (`GradScaler`) |
+| 🟦 | BF16 | 1 / 8 / 7 | Wide (same as FP32) | Low | Usually no |
+
+- **Analogy**: FP32 is a ruler with fine marks and long reach; FP16 has fine marks but is short; BF16 is long with coarse marks.
+- **Use when / watch out**: BF16 is generally preferred for training stability where hardware supports it; FP16 needs loss scaling.
+
+### 🟦 Mixed precision
+- **Definition**: run most ops in 16-bit, keep sensitive ones in FP32 (autocast chooses per op).
+- **Code idea**: `with torch.autocast(device_type="cuda", dtype=torch.bfloat16): loss = ...`
+- **Use when / watch out**: for FP16 on CUDA add `GradScaler`; gains are largest on GPUs with fast 16-bit units.
+
+### 🟩 Gradient accumulation
+- **Definition**: run several micro-batches, adding their gradients, then call `optimizer.step()` once.
+- **Analogy**: several trips of the small van before unpacking.
+- **Code idea**: `(loss / accum_steps).backward()` each micro-batch; step and `zero_grad()` every `accum_steps`.
+- **Use when / watch out**: divide the loss by `accum_steps` so the sum matches the mean over the large batch; batch-norm statistics still see only the micro-batch.
+
+### 🟥 Gradient clipping
+- **Definition**: rescale gradients so their global norm is at most a threshold.
+- **Code idea**: `torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)` after `backward()` and before `step()`.
+- **Analogy**: a speed limiter on the update.
+- **Use when / watch out**: RNNs, Transformers, spiky losses; with `GradScaler`, call `scaler.unscale_(optimizer)` first.
+
+### 🟩 GPU memory budget
+- **Definition**: VRAM holds parameters, gradients, optimizer state, and activations.
+- **Analogy**: a van's cargo space shared by boxes, packing material, and the toolbox.
+- **Use when / watch out**: Adam keeps two extra buffers per parameter; activations grow with batch size and sequence length.
+
+### 🟧 Profiling
+- **Definition**: measure time in data loading, forward, backward, and optimizer step.
+- **Use when / watch out**: measure before optimizing; if the loader dominates, tune `num_workers`, not the model. For GPU timing, synchronize before reading the clock.
+
+### Differences at a glance
+
+| | Technique | Solves | Cost / trade-off |
+|---|---|---|---|
+| 🟦 | Mixed precision | Slow training, high memory | Some precision loss; FP16 needs loss scaling |
+| 🟩 | Gradient accumulation | Batch too big for memory | More time per optimizer step; not faster |
+| 🟥 | Gradient clipping | Exploding or spiky gradients | Extra hyperparameter (max norm) |
+| 🟧 | Profiling | Unknown bottleneck | Small measurement overhead |
+
+> [!WARNING]
+> FP16 without loss scaling can underflow small gradients to zero, silently stalling training.
+
+> [!TIP]
+> Out of memory? Try in order: smaller micro-batch with accumulation, mixed precision, then a smaller model or shorter sequences.
+
+### 🗺️ Concept map
+
+```mermaid
+flowchart TD
+  P["Problem"] --> Q{"What is wrong?"}
+  Q -->|"too slow or too much memory"| MP["Mixed precision: FP16 or BF16"]
+  Q -->|"batch does not fit"| GA["Gradient accumulation"]
+  Q -->|"loss spikes or NaN"| GC["Gradient clipping"]
+  Q -->|"GPU idle"| PR["Profile the data loader"]
+  MP --> FP16["FP16: needs GradScaler"]
+  MP --> BF16["BF16: wide range, preferred"]
+  classDef start fill:#F3F4F6,stroke:#6B7280,color:#1a1a1a;
+  classDef prec fill:#DBEAFE,stroke:#2563EB,color:#1a1a1a;
+  classDef mem fill:#DCFCE7,stroke:#16A34A,color:#1a1a1a;
+  classDef stab fill:#FEE2E2,stroke:#DC2626,color:#1a1a1a;
+  classDef meas fill:#FEF3C7,stroke:#D97706,color:#1a1a1a;
+  class P,Q start;
+  class MP,FP16,BF16 prec;
+  class GA mem;
+  class GC stab;
+  class PR meas;
 ```
 
 ## Important APIs / functions

@@ -1,5 +1,38 @@
 # 09 — Unsupervised Learning
 
+> Find structure in data that has no labels: group similar points, or squeeze many features into few.
+
+| At a glance | |
+|---|---|
+| **Day** | Day 2 — Machine Learning |
+| **Topic** | Clustering and dimensionality reduction |
+| **Notebooks** | 2 (`01_clustering`, `02_dimensionality_reduction`) |
+| **Builds on** | [`08_classification`](../08_classification/README.md), Day 1 `05_ml_mathematics` (eigenvectors, SVD) |
+| **Leads to** | [`10_ml_optimization`](../10_ml_optimization/README.md) |
+
+## 📖 Short forms used in this topic
+
+| Term | Full form | What it is |
+|---|---|---|
+| **DBSCAN** | Density-Based Spatial Clustering of Applications with Noise | Clusters dense regions and labels sparse points as noise; no need to set k. |
+| **eps** | Epsilon (neighbourhood radius) | DBSCAN hyperparameter: how close points must be to be neighbours. |
+| **min_samples** | Minimum samples | DBSCAN hyperparameter: neighbours needed to form a dense core. |
+| **ARI** | Adjusted Rand Index | Agreement between clusters and true labels, corrected for chance (1 = perfect, ~0 = random). |
+| **PCA** | Principal Component Analysis | Linear dimensionality reduction: projects data onto orthogonal directions of maximum variance. |
+| **SVD** | Singular Value Decomposition | Factorises a matrix as U·Σ·Vᵀ; basis for low-rank approximation and PCA. |
+| **t-SNE** | t-distributed Stochastic Neighbor Embedding | Non-linear 2D/3D embedding that preserves local neighbourhoods; for visualisation only. |
+| **UMAP** | Uniform Manifold Approximation and Projection | Non-linear dimensionality reduction; faster than t-SNE and keeps more global structure. |
+| **API** | Application Programming Interface | The set of functions/classes a library exposes. |
+| **WCSS** | Within-Cluster Sum of Squares | Sum of squared distances of points to their cluster centre; this is K-means' `inertia_`. |
+
+## 🧠 In plain words
+
+Unsupervised learning works on data with no answer column. Clustering groups similar rows together (customer segments, outliers). Dimensionality reduction rewrites many columns as a few new ones, either to compress data (PCA/SVD) or to draw it on a 2D plot (t-SNE/UMAP).
+
+## 🎒 Analogy to remember
+
+Sorting a pile of unlabeled photos: clustering is making piles of look-alikes; PCA is choosing the one or two camera angles that show the most difference between photos; t-SNE is arranging photos on a table so near-duplicates sit together, even though distances across the table mean little. Where it breaks down: a person knows what "similar" means; an algorithm only knows the distance or density rule you gave it.
+
 ## Learning objectives
 
 By the end of this topic you can:
@@ -27,16 +60,112 @@ simpler downstream models — both are everyday tools, not just academic exercis
 - **SVD**: the general matrix factorization PCA is built on; applies even to non-square, sparse matrices (e.g. recommender systems).
 - **t-SNE / UMAP**: non-linear techniques that preserve *local* neighborhood structure for 2D/3D visualization. They distort global distances and are **not** suitable as a general preprocessing step before a downstream supervised model (unlike PCA) — their primary use is making high-dimensional data visually inspectable.
 
+## 🔍 Concepts explained
+
+> [!NOTE]
+> Group chips: 🟦 clustering, 🟩 linear dimensionality reduction, 🟧 non-linear (visualization) reduction.
+
+### 🟦 K-means
+- **Definition**: assign each point to the nearest of `k` centroids, recompute centroids, repeat.
+- **Analogy**: placing `k` fire stations so each house goes to its nearest one.
+- **Code idea**: `KMeans(n_clusters=3, n_init=10).fit(X)`; `inertia_` for the elbow plot, `cluster_centers_` for centroids.
+- **Use when / watch out**: round, similar-sized clusters; must choose `k`; scale features.
+
+### 🟦 Hierarchical (agglomerative) clustering
+- **Definition**: repeatedly merge the two closest clusters, producing a dendrogram you can cut at any height.
+- **Analogy**: a family tree built from the bottom up.
+- **Code idea**: `AgglomerativeClustering`, `linkage` + `dendrogram` from SciPy.
+- **Use when / watch out**: small data and when `k` is unknown; costly on large data.
+
+### 🟦 DBSCAN
+- **Definition**: grows clusters from dense neighbourhoods (`eps`, `min_samples`); sparse points get label `-1` (noise).
+- **Analogy**: finding crowds in a park; loners stay unassigned.
+- **Code idea**: `DBSCAN(eps=0.2, min_samples=5).fit(X)`.
+- **Use when / watch out**: arbitrary shapes and outlier detection; sensitive to `eps` and to varied densities.
+
+### 🟩 PCA
+- **Definition**: project onto orthogonal directions of maximum variance; a scree plot shows variance explained per component.
+- **Analogy**: choosing the camera angle that shows the most spread.
+- **Code idea**: `PCA(n_components=2)`; `np.cumsum(explained_variance_ratio_)` to pick components for 95% variance.
+- **Use when / watch out**: safe as preprocessing for downstream models; only captures linear structure.
+
+### 🟩 SVD
+- **Definition**: factor a matrix as `U·Σ·Vᵀ`; scikit-learn's PCA uses SVD of the centred data.
+- **Analogy**: breaking a complex movement into its strongest simple motions.
+- **Code idea**: `np.linalg.svd(X_centered, full_matrices=False)`; top rows of `Vt` match PCA components up to sign.
+- **Use when / watch out**: works on non-square matrices; centre the data first for PCA equivalence.
+
+### 🟧 t-SNE / UMAP
+- **Definition**: non-linear embeddings that keep local neighbourhoods when projecting to 2D/3D.
+- **Analogy**: seating guests so friends sit together; table distances across the room are not meaningful.
+- **Code idea**: `TSNE(n_components=2, perplexity=30)`; `umap.UMAP(n_components=2)` (optional install).
+- **Use when / watch out**: for looking at data only, not as model features; layouts vary by seed.
+
+### Differences at a glance
+
+| Method | Group | Needs `k`? | Shape assumed | Strength | Pitfall |
+|---|---|---|---|---|---|
+| K-means | 🟦 | Yes | Round, similar size | Fast, simple | Fails on moons or uneven sizes |
+| Hierarchical | 🟦 | No (cut dendrogram) | Depends on linkage | Shows structure at all scales | Does not scale |
+| DBSCAN | 🟦 | No | Arbitrary | Finds outliers | `eps` and `min_samples` tuning |
+| PCA / SVD | 🟩 | n components | Linear | Stable, reusable for models | Misses non-linear structure |
+| t-SNE | 🟧 | n components (2-3) | Non-linear | Great local clusters in plots | Not for features; seed dependent |
+| UMAP | 🟧 | n components | Non-linear | Faster, keeps more global structure | Optional dependency |
+
+> [!WARNING]
+> Never feed t-SNE/UMAP coordinates to a downstream classifier: distances are not globally meaningful and layouts are not stable across runs.
+
+> [!TIP]
+> Scale features before K-means, DBSCAN and PCA; inertia always falls as `k` grows, so look for the elbow.
+
+## Concept map
+
 ```mermaid
 flowchart LR
-  A[Unlabeled data] --> B[Clustering]
-  B --> C[K-means: spherical, fixed k]
-  B --> D[Hierarchical: dendrogram, any k post-hoc]
-  B --> E[DBSCAN: density-based, finds outliers]
-  A --> F[Dimensionality reduction]
-  F --> G[PCA/SVD: linear, preserves global variance]
-  F --> H[t-SNE/UMAP: non-linear, local structure, visualization only]
-  G -.often applied before.-> B
+  A["Unlabeled data"] --> B["Clustering"]
+  A --> F["Dimensionality reduction"]
+  subgraph CL["Clustering"]
+    C["K-means: round clusters, fixed k"]
+    D["Hierarchical: dendrogram, any k afterwards"]
+    E["DBSCAN: density based, finds outliers"]
+  end
+  subgraph DR["Dimensionality reduction"]
+    G["PCA and SVD: linear, global variance"]
+    H["t-SNE and UMAP: non-linear, visualization only"]
+  end
+  B --> C
+  B --> D
+  B --> E
+  F --> G
+  F --> H
+  G -.->|"often applied before"| B
+  classDef data fill:#EDE9FE,stroke:#7C3AED,color:#1a1a1a;
+  classDef clu fill:#DBEAFE,stroke:#2563EB,color:#1a1a1a;
+  classDef lin fill:#DCFCE7,stroke:#16A34A,color:#1a1a1a;
+  classDef nonlin fill:#FEF3C7,stroke:#D97706,color:#1a1a1a;
+  class A,B,F data;
+  class C,D,E clu;
+  class G lin;
+  class H nonlin;
+```
+
+Which technique?
+
+```mermaid
+flowchart TD
+  Q1{"Goal?"}
+  Q1 -->|"group points"| Q2{"Know k and round clusters?"}
+  Q2 -->|"yes"| R1["K-means"]
+  Q2 -->|"no, odd shapes or outliers"| R2["DBSCAN"]
+  Q2 -->|"want a hierarchy"| R3["Hierarchical"]
+  Q1 -->|"compress for models"| R4["PCA or SVD"]
+  Q1 -->|"look at data in 2D"| R5["t-SNE or UMAP"]
+  classDef q fill:#DBEAFE,stroke:#2563EB,color:#1a1a1a;
+  classDef a fill:#DCFCE7,stroke:#16A34A,color:#1a1a1a;
+  classDef w fill:#FEF3C7,stroke:#D97706,color:#1a1a1a;
+  class Q1,Q2 q;
+  class R1,R2,R3,R4 a;
+  class R5 w;
 ```
 
 ## Important APIs / functions

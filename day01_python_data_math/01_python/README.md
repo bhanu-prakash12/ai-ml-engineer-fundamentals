@@ -1,5 +1,42 @@
 # 01 — Python Fundamentals for ML Engineering
 
+> Python is the glue language of ML: master its data structures, laziness (generators), wrappers (decorators) and concurrency model, and every ML framework becomes readable.
+
+| | |
+|---|---|
+| **Day** | 1 — Python + Data + Math |
+| **Topic** | 01 — Python fundamentals for ML engineering |
+| **Notebooks** | 3 (`01_core_language`, `02_generators_decorators_contextmanagers`, `03_stdlib_and_concurrency`) |
+| **Builds on** | Nothing — the starting point |
+| **Leads to** | [`02_numpy`](../02_numpy/README.md) (arrays), then everything else |
+
+## 📖 Short forms used in this topic
+
+| Term | Full form | What it is |
+|---|---|---|
+| **OOP** | Object-Oriented Programming | Organising code as classes (data + behaviour bundled together) and their instances. |
+| **GIL** | Global Interpreter Lock | A lock in CPython so only one thread runs Python bytecode at a time; it is released during blocking I/O. |
+| **CPU** | Central Processing Unit | The processor; "CPU-bound" work is limited by computation, not waiting. |
+| **I/O** | Input / Output | Waiting on disk, network or other external resources ("I/O-bound" work). |
+| **ML** | Machine Learning | Building models that learn patterns from data. |
+| **JSON** | JavaScript Object Notation | A text format for nested key-value data (`json` module). |
+| **CSV** | Comma-Separated Values | A plain-text table format, one row per line (`csv` module). |
+| **API** | Application Programming Interface | The set of functions/classes/endpoints a library or service exposes. |
+| **CUDA** | Compute Unified Device Architecture | NVIDIA's platform for running code on GPUs (mentioned as what ML frameworks wrap). |
+| **GPU** | Graphics Processing Unit | Massively parallel processor used to train neural networks. |
+| **regex** | Regular expression | A pattern language for matching text (`re` module). |
+| **stdlib** | Standard library | Modules that ship with Python (`json`, `pathlib`, `logging`, ...). |
+| **`*args` / `**kwargs`** | Positional / keyword arguments | Catch-all parameters: a tuple of extra positional args and a dict of extra keyword args. |
+
+## 🧠 In plain words
+
+Python is a readable language that ML libraries are written around. This topic covers the Python features ML code leans on: containers for data, short ways to transform it, classes to model it, lazy generators to stream it, wrappers (decorators and `with` blocks) to add behaviour, and tools to do many things at once.
+
+## 🎒 Analogy to remember
+
+Think of a **kitchen**. Collections are your containers (jar, tray, labelled spice rack). Generators are a chef cooking each dish **to order** instead of pre-making 10,000 meals. Decorators are packaging a dish passes through (timing sticker, caching box). Concurrency: threads are several cooks sharing **one stove burner** (the GIL) - they only help while someone waits for the oven (I/O); multiprocessing is opening more kitchens (CPU-bound work).
+*Where it breaks down:* real cooks never "pickle" a recipe to send it to another kitchen - Python must, which is why lambdas fail in `multiprocessing`.
+
 ## Learning objectives
 
 By the end of this topic you can:
@@ -35,14 +72,130 @@ None — this is the starting point of the curriculum.
 
 ```mermaid
 flowchart LR
-  A[Collections & comprehensions] --> B[Functions, *args/**kwargs, lambda]
-  B --> C[OOP: classes, dataclasses, magic methods]
-  C --> D[Iterators & generators]
-  D --> E[Decorators & context managers]
-  E --> F[Exceptions & typing]
-  F --> G[Concurrency: asyncio / threading / multiprocessing + GIL]
-  G --> H[Ready for NumPy: vectorized data structures]
+  subgraph S1["Data and functions"]
+    A["Collections and comprehensions"] --> B["Functions, args/kwargs, lambda"]
+    B --> C["OOP: classes, dataclasses, magic methods"]
+  end
+  subgraph S2["Lazy and wrapping"]
+    D["Iterators and generators"] --> E["Decorators and context managers"]
+  end
+  subgraph S3["Robust and parallel"]
+    F["Exceptions and typing"] --> G["Concurrency: asyncio, threading, multiprocessing, GIL"]
+  end
+  C --> D
+  E --> F
+  G --> H["Ready for NumPy"]
+  classDef data fill:#DBEAFE,stroke:#2563EB,color:#1a1a1a;
+  classDef lazy fill:#FEF3C7,stroke:#D97706,color:#1a1a1a;
+  classDef safe fill:#EDE9FE,stroke:#7C3AED,color:#1a1a1a;
+  classDef done fill:#DCFCE7,stroke:#16A34A,color:#1a1a1a;
+  class A,B,C data;
+  class D,E lazy;
+  class F,G safe;
+  class H done;
 ```
+
+## 🔍 Concepts explained
+
+**Category chips:** 🟦 Data structures · 🟩 Functions and OOP · 🟧 Lazy and wrapping · 🟥 Safety · 🟪 Concurrency
+
+### 🟦 Collections
+
+| Type | Ordered | Mutable | Duplicates | Lookup | Use when | Pitfall |
+|---|---|---|---|---|---|---|
+| `list` | yes | yes | yes | by index | sequence you will grow/change | `a = b = []` aliases one list |
+| `tuple` | yes | no | yes | by index | fixed records, dict keys, return values | one-element needs a comma: `(1,)` |
+| `set` | no | yes | no | membership test | de-duplicate, fast `in` | elements must be hashable |
+| `dict` | insertion order | yes | unique keys | by key | label to value, configs | keys must be hashable |
+
+> [!WARNING]
+> Mutability is shared state. `def f(x=[])` evaluates the default **once**, so every call reuses the same list.
+
+### 🟩 Functions and OOP
+
+**`*args` / `**kwargs`**
+- **Definition:** collect extra positional args into a tuple and extra keyword args into a dict.
+- **Analogy:** a "bring anything" bag at the door.
+- **Code idea:** `def forward(self, *args, **kwargs): return self.net(*args, **kwargs)`
+- **Use when / watch out:** wrappers and extensible APIs; hides the real signature, so document it.
+
+**Dataclass**
+- **Definition:** `@dataclass` generates `__init__`, `__repr__`, `__eq__` from annotated fields.
+- **Analogy:** a pre-printed form - you only fill in the fields.
+- **Code idea:** `@dataclass class Batch: x: list; y: list`
+- **Use when / watch out:** configs, records, batches. Use `field(default_factory=list)` for mutable defaults.
+
+**Magic (dunder) methods**
+- **Definition:** special methods Python calls for you (`len(obj)` calls `__len__`, `obj[i]` calls `__getitem__`, `for` calls `__iter__`).
+- **Analogy:** the standard electrical socket - implement the plug shape and any appliance (the framework) works.
+- **Use when / watch out:** `__len__` + `__getitem__` is the map-style PyTorch `Dataset` contract.
+
+| Option | Relationship | Use when | Pitfall |
+|---|---|---|---|
+| Inheritance | "is-a" | true specialisation (`MyNet` is an `nn.Module`) | deep hierarchies get brittle |
+| Composition | "has-a" | build models from parts (a net **has** layers) | slightly more wiring |
+
+### 🟧 Lazy and wrapping
+
+**Generator (`yield`)**
+- **Definition:** a function that produces values one at a time and pauses between them.
+- **Analogy:** cooking to order vs a buffet pre-made for everyone.
+- **Code idea:** `def batched(it, n): ...  yield batch`
+- **Use when / watch out:** data larger than memory, streaming. One-shot: it cannot be re-iterated.
+
+**Decorator**
+- **Definition:** a function that takes a function and returns a wrapped function; `@d` above `def f` means `f = d(f)`.
+- **Analogy:** gift-wrapping - same gift, extra layer.
+- **Code idea:** timing wrapper using `functools.wraps`.
+- **Use when / watch out:** cross-cutting behaviour (timing, caching, `torch.no_grad()`); forget `functools.wraps` and you lose the name/docstring.
+
+**Context manager (`with`)**
+- **Definition:** an object with `__enter__`/`__exit__` that guarantees set-up and clean-up.
+- **Analogy:** hotel key card: room opens on entry, locks on exit even if you leave in a hurry.
+- **Use when / watch out:** files, locks, `torch.no_grad()`; `@contextmanager` turns a generator into one.
+
+| Option | Memory | Re-iterable | Use when |
+|---|---|---|---|
+| List comprehension `[...]` | O(n) | yes | you need all items / random access |
+| Generator expression `(...)` | O(1) | no | stream once, huge data |
+
+### 🟥 Safety
+
+- **Exceptions:** `try/except/finally` handle errors; catch specific types.
+- **Typing:** hints (`list[int]`, `Optional[str]`) are not enforced at runtime; checkers like `mypy` read them.
+
+> [!WARNING]
+> A bare `except:` also swallows `KeyboardInterrupt` and real bugs. Catch the narrowest exception you can handle.
+
+### 🟪 Concurrency - which tool?
+
+| Tool | Parallel CPU work? | Best for | Pitfall |
+|---|---|---|---|
+| `threading` | No (GIL) | I/O-bound, blocking libraries | no speed-up on pure-Python CPU loops |
+| `asyncio` | No (single thread) | many concurrent I/O waits (API calls) | needs `await`-compatible libraries |
+| `multiprocessing` | Yes (separate processes) | CPU-bound work | start-up + pickling cost; lambdas not picklable |
+
+```mermaid
+flowchart TD
+  Q{"What limits my task?"}
+  Q -->|"CPU computation"| MP["multiprocessing: one process per core"]
+  Q -->|"Waiting on I/O"| IO{"Library supports await?"}
+  IO -->|"yes"| AS["asyncio"]
+  IO -->|"no, blocking calls"| TH["threading"]
+  classDef cpu fill:#FEE2E2,stroke:#DC2626,color:#1a1a1a;
+  classDef io fill:#DBEAFE,stroke:#2563EB,color:#1a1a1a;
+  classDef pick fill:#DCFCE7,stroke:#16A34A,color:#1a1a1a;
+  classDef ask fill:#FEF3C7,stroke:#D97706,color:#1a1a1a;
+  class Q,IO ask;
+  class MP cpu;
+  class AS,TH pick;
+```
+
+> [!TIP]
+> NumPy and many C extensions release the GIL while computing, so threads can still help there. For pure-Python CPU loops, use processes.
+
+> [!NOTE]
+> The pattern throughout this topic: magic methods, generators, decorators and context managers are all "protocols" - you implement a small interface and the language or framework does the rest.
 
 ## Important APIs / functions
 
