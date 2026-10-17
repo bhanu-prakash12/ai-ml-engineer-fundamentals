@@ -1,5 +1,37 @@
 # 18 — PyTorch Basics: Tensors, Devices, Shapes
 
+> PyTorch tensors are NumPy arrays that can live on a GPU and remember how they were computed.
+
+| | |
+|---|---|
+| **Day** | 3 — Deep Learning + PyTorch |
+| **Topic** | Tensors, dtype, devices, shapes |
+| **Notebooks** | 1 (`01_tensors_devices_shapes.ipynb`) |
+| **Builds on** | Day 1 `02_numpy`, [`17_deep_learning_architectures`](../17_deep_learning_architectures/README.md) |
+| **Leads to** | [`19_pytorch_autograd`](../19_pytorch_autograd/README.md) |
+
+## 📖 Short forms used in this topic
+
+| Term | Full form | What it is |
+|---|---|---|
+| CPU | Central Processing Unit | General-purpose processor; default tensor device |
+| GPU | Graphics Processing Unit | Massively parallel processor, ideal for matrix math |
+| CUDA | Compute Unified Device Architecture | NVIDIA's GPU computing platform; device `"cuda"` |
+| MPS | Metal Performance Shaders | Apple's GPU backend for Apple Silicon; device `"mps"` |
+| NVIDIA | (company name) | Maker of the GPUs that CUDA targets |
+| FP32 | 32-bit floating point | PyTorch's default float dtype (`torch.float32`) |
+| NumPy | Numerical Python | Array library whose operations PyTorch mirrors |
+| ndarray | N-dimensional array | NumPy's array type |
+| `matmul` / `@` | Matrix multiplication | Operator for matrix products |
+
+## 🧠 In plain words
+
+A tensor is a grid of numbers with a shape (its dimensions), a dtype (number type), and a device (where it lives: CPU or GPU). PyTorch operations on tensors look just like NumPy but can run on a GPU and, as the next topic shows, can track gradients automatically.
+
+## 🎒 Analogy to remember
+
+A tensor is a **spreadsheet that lives in a particular office**. The sheet's dimensions are its shape, the cell format is its dtype, and the office (CPU building or GPU building) is its device. You can only combine two sheets that are in the same office, so you must courier one over (`.to(device)`), which takes time. *Where it breaks down:* a spreadsheet has two dimensions, a tensor can have any number.
+
 ## Learning objectives
 
 By the end of this topic you can:
@@ -30,11 +62,93 @@ material, ported) and [`17_deep_learning_architectures`](../17_deep_learning_arc
 
 ```mermaid
 flowchart LR
-  A[NumPy ndarray] -->|torch.from_numpy| B[PyTorch tensor, CPU]
-  B -->|.to('cuda') / .to('mps')| C[PyTorch tensor, GPU]
-  C -->|.cpu().numpy()| A
-  B --> D[Same ops as NumPy: index/reshape/transpose/broadcast/matmul]
-  D --> E[19_pytorch_autograd: gradients tracked automatically]
+  A["NumPy ndarray"] -->|"torch.from_numpy"| B["PyTorch tensor on CPU"]
+  B -->|"to cuda or to mps"| C["PyTorch tensor on GPU"]
+  C -->|"cpu then numpy"| A
+  B --> D["Same ops as NumPy: index, reshape, transpose, broadcast, matmul"]
+  D --> E["19_pytorch_autograd: gradients tracked automatically"]
+  classDef np fill:#FEF3C7,stroke:#D97706,color:#1a1a1a;
+  classDef cpu fill:#DBEAFE,stroke:#2563EB,color:#1a1a1a;
+  classDef gpu fill:#DCFCE7,stroke:#16A34A,color:#1a1a1a;
+  classDef next fill:#EDE9FE,stroke:#7C3AED,color:#1a1a1a;
+  class A np;
+  class B,D cpu;
+  class C gpu;
+  class E next;
+```
+
+## 🔍 Concepts explained
+
+> [!NOTE]
+> Chips: 🟦 data properties (shape, dtype) · 🟩 device · 🟧 shape operations · 🟥 gotchas.
+
+### 🟦 Tensor, shape, dtype
+- **Definition**: an n-dimensional array; `.shape` gives sizes, `.dtype` the number type.
+- **Analogy**: a spreadsheet with a fixed grid and a fixed cell format.
+- **Code idea**: `torch.tensor([[1., 2.], [3., 4.]]).shape  # torch.Size([2, 2])`.
+- **Use when / watch out**: deep learning defaults to `float32`, not `float64`; integer tensors (e.g. token IDs) are `int64`.
+
+### 🟩 Device (CPU / CUDA / MPS)
+- **Definition**: where the tensor's memory lives and where ops run.
+- **Analogy**: which office holds the spreadsheet.
+- **Code idea**: `x.to("cuda")` or `x.to("mps")`; detect with `torch.cuda.is_available()` / `torch.backends.mps.is_available()`.
+- **Use when / watch out**: mixing devices raises `RuntimeError`; transfers cost time, so move data once, not per op.
+
+### 🟧 view vs reshape
+- **Definition**: both change shape; `view` requires compatible (contiguous) memory and shares storage, `reshape` copies if it must.
+- **Analogy**: `view` is re-labelling the same shelf; `reshape` may need to move the boxes.
+- **Use when / watch out**: after `transpose`, `.view()` can fail; use `.reshape()` or `.contiguous().view()`.
+
+### 🟧 Broadcasting and matmul
+- **Definition**: broadcasting auto-expands size-1 (or missing) dimensions in elementwise ops; `@` is matrix product.
+- **Analogy**: stretching a single row of stickers across a whole sheet.
+- **Use when / watch out**: same rules as NumPy; `*` is elementwise, `@` is matrix multiplication.
+
+### 🟩 NumPy interop
+- **Definition**: `torch.from_numpy(a)` and `t.numpy()` convert between the two.
+- **Analogy**: two labels for the same box.
+- **Use when / watch out**: on CPU they share memory, so mutating one changes the other; GPU tensors need `.cpu()` first.
+
+### Differences at a glance
+
+| | Option | Copies data? | Needs contiguous memory? | Use when |
+|---|---|---|---|---|
+| 🟧 | `.view()` | No (shares storage) | Yes | You know the layout is contiguous |
+| 🟧 | `.reshape()` | Only if needed | No | Safe default |
+| 🟩 | `torch.from_numpy` | No (CPU, shared) | n/a | Cheap NumPy to PyTorch |
+| 🟩 | `.to(device)` | Yes if device changes | n/a | Moving to GPU |
+
+> [!WARNING]
+> `RuntimeError: Expected all tensors to be on the same device` means one operand is on a different device. Move them to the same device before the op.
+
+> [!TIP]
+> Pick the device once at the top (`cuda`, else `mps`, else `cpu`) and use `.to(device)` consistently.
+
+### 🗺️ Concept map
+
+```mermaid
+flowchart LR
+  subgraph PROPS["Properties"]
+    SH["shape"]
+    DT["dtype"]
+    DV["device"]
+  end
+  subgraph OPS["Operations"]
+    IX["index / slice"]
+    RS["view / reshape / transpose"]
+    BC["broadcast"]
+    MM["matmul"]
+  end
+  T["Tensor"] --> PROPS
+  T --> OPS
+  DV --> CP["CPU"]
+  DV --> GP["GPU: CUDA or MPS"]
+  classDef core fill:#DBEAFE,stroke:#2563EB,color:#1a1a1a;
+  classDef prop fill:#DCFCE7,stroke:#16A34A,color:#1a1a1a;
+  classDef op fill:#FEF3C7,stroke:#D97706,color:#1a1a1a;
+  class T core;
+  class SH,DT,DV,CP,GP prop;
+  class IX,RS,BC,MM op;
 ```
 
 ## Important APIs / functions

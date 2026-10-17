@@ -1,5 +1,34 @@
 # 11 — Generalization
 
+> Training error is easy; the real goal is low error on data the model has never seen.
+
+| At a glance | |
+|---|---|
+| **Day** | 2 — Machine Learning |
+| **Topic** | Overfitting, underfitting, bias-variance, regularization, early stopping |
+| **Notebooks** | 1 (`01_regularization_and_generalization.ipynb`) |
+| **Builds on** | [`10_ml_optimization`](../10_ml_optimization/README.md), [`06_ml_fundamentals`](../06_ml_fundamentals/README.md) |
+| **Leads to** | [`12_ml_evaluation`](../12_ml_evaluation/README.md), [`14_hyperparameter_tuning`](../14_hyperparameter_tuning/README.md) |
+
+## 📖 Short forms used in this topic
+
+| Term | Full form | What it is |
+|---|---|---|
+| **L1** | L1 norm / Lasso penalty | Penalty on the sum of absolute weights; drives some weights to exactly zero. |
+| **L2** | L2 norm / Ridge penalty | Penalty on the sum of squared weights; shrinks weights smoothly. |
+| **Lasso** | Least Absolute Shrinkage and Selection Operator | Linear regression with an L1 penalty. |
+| **Ridge** | Ridge regression | Linear regression with an L2 penalty. |
+| **MSE** | Mean Squared Error | Average of squared prediction errors; the standard regression loss. |
+| **λ / alpha** | Regularization strength | Weight of the penalty term (`alpha` in scikit-learn). |
+
+## 🧠 In plain words
+
+Generalization is how well a model does on new data. A model that memorizes its training set (overfitting) or is too simple to learn the pattern (underfitting) both generalize badly. Regularization, early stopping and more varied data are the tools that keep a model from memorizing noise.
+
+## 🎒 Analogy to remember
+
+Studying for an exam. Memorizing last year's answer key (overfitting) gets full marks on the practice paper and fails the real one; skimming only the chapter titles (underfitting) fails both. Regularization is a rule like "answers must be short", which stops you from memorizing every detail. Early stopping is putting the book down once mock-exam scores stop improving. Where it breaks: a student chooses to cram, whereas a model overfits automatically.
+
 ## Learning objectives
 
 By the end of this topic you can:
@@ -32,14 +61,91 @@ tools you'll reuse directly on neural networks in Day 3.
 
 ```mermaid
 flowchart LR
-  A[Model capacity too low] --> B[Underfitting: high bias]
-  C[Model capacity too high, no regularization] --> D[Overfitting: high variance]
-  E[L1/L2/Elastic Net] --> F[Shrink/zero weights -> reduce variance]
-  G[Early stopping] --> F
-  H[Data augmentation] --> F
-  B -.opposite failure mode of.-> D
-  F --> I[Better generalization: validation/test performance]
+  subgraph P["Problems"]
+    A["Model capacity too low"] --> B["Underfitting: high bias"]
+    C["Capacity too high, no regularization"] --> D["Overfitting: high variance"]
+  end
+  subgraph T["Remedies for variance"]
+    E["L1, L2, Elastic Net"]
+    G["Early stopping"]
+    H["Data augmentation"]
+    J["Dropout"]
+  end
+  E --> F["Shrink or zero weights, reduce variance"]
+  G --> F
+  H --> F
+  J --> F
+  B -.->|"opposite failure mode of"| D
+  D --> E
+  F --> I["Better generalization on validation and test data"]
+  classDef bad fill:#FEE2E2,stroke:#DC2626,color:#1a1a1a;
+  classDef warn fill:#FEF3C7,stroke:#D97706,color:#1a1a1a;
+  classDef fix fill:#DBEAFE,stroke:#2563EB,color:#1a1a1a;
+  classDef good fill:#DCFCE7,stroke:#16A34A,color:#1a1a1a;
+  class B,D bad;
+  class A,C warn;
+  class E,G,H,J fix;
+  class F,I good;
 ```
+
+## 🔍 Concepts explained
+
+Chips: 🟥 failure modes, 🟦 penalty-based regularizers, 🟩 training-procedure / data regularizers.
+
+### 🟥 Underfitting vs overfitting (bias vs variance)
+- **Definition**: underfit = high error on train and validation (high bias); overfit = low train error, high validation error (high variance).
+- **Analogy**: skimming titles vs memorizing the answer key.
+- **Formula**: expected error ≈ bias² + variance + irreducible noise.
+- **Use when / watch out**: compare train vs validation error to diagnose; the notebook estimates bias² and variance over 200 resampled datasets for polynomial degrees 1, 4, 8.
+
+### 🟦 L1 (Lasso)
+- **Definition**: adds `λΣ|w|` to the loss; some weights become exactly zero.
+- **Analogy**: a strict packing limit that forces you to leave items out entirely.
+- **Code idea**: `sklearn.linear_model.Lasso(alpha=...)`.
+- **Use when / watch out**: many features, few relevant; unstable among correlated features.
+
+### 🟦 L2 (Ridge)
+- **Definition**: adds `λΣw²`; shrinks all weights smoothly.
+- **Analogy**: making every item in the bag a bit lighter instead of dropping any.
+- **Code idea**: `sklearn.linear_model.Ridge(alpha=...)`.
+- **Use when / watch out**: most features are somewhat useful; no feature selection.
+
+### 🟦 Elastic Net
+- **Definition**: weighted mix of L1 and L2 penalties.
+- **Analogy**: a packing limit plus lighter items.
+- **Code idea**: `sklearn.linear_model.ElasticNet(alpha=..., l1_ratio=...)`.
+- **Use when / watch out**: correlated features where you still want sparsity; two knobs to tune.
+
+### 🟩 Early stopping
+- **Definition**: stop iterative training when validation loss has not improved for a patience window.
+- **Analogy**: closing the textbook when mock scores plateau.
+- **Code idea**: track train and validation loss each epoch; keep the best.
+- **Use when / watch out**: watch validation loss, not training loss; too small a patience stops too early.
+
+### 🟩 Dropout and data augmentation (concepts)
+- **Definition**: dropout randomly zeroes neurons during training; augmentation creates varied copies of training data.
+- **Analogy**: practicing with random teammates absent; practicing the same play from many angles.
+- **Use when / watch out**: neural networks (Day 3); augmentation must preserve the label.
+
+### Differences at a glance
+
+| Technique | Chip | Changes loss? | Effect on weights | Best when | Pitfall |
+|---|---|---|---|---|---|
+| L1 / Lasso | 🟦 | Yes | Exact zeros | Few relevant features | Picks arbitrarily among correlated features |
+| L2 / Ridge | 🟦 | Yes | Smooth shrinkage | All features matter a bit | Keeps every feature |
+| Elastic Net | 🟦 | Yes | Sparse and smooth | Correlated features | Two hyperparameters |
+| Early stopping | 🟩 | No | Implicit limit | Iterative fits | Needs a validation set |
+| Dropout | 🟩 | No | Reduces co-adaptation | Neural nets | Not for plain linear models |
+| Augmentation | 🟩 | No | Indirect | Images, text | Label-changing transforms |
+
+> [!NOTE]
+> You cannot drive bias and variance to zero together by changing capacity; regularization trades a little bias for lower variance.
+
+> [!WARNING]
+> Choosing `alpha` on the test set leaks information. Tune it on a validation set (see `14_hyperparameter_tuning`).
+
+> [!TIP]
+> If raising L2 strength makes both train and validation error worse, you were already underfitting.
 
 ## Important APIs / functions
 

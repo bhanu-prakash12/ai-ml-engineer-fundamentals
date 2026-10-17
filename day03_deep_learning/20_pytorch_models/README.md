@@ -1,5 +1,37 @@
 # 20 — PyTorch Models: `nn.Module`
 
+> `nn.Module` is the container that turns layers into a model: it owns the parameters and defines `forward()`.
+
+| | |
+|---|---|
+| **Day** | 3 — Deep Learning + PyTorch |
+| **Topic** | `nn.Module` and the standard layers |
+| **Notebooks** | 1 (`01_nn_module_basics.ipynb`) |
+| **Builds on** | [`19_pytorch_autograd`](../19_pytorch_autograd/README.md), [`17_deep_learning_architectures`](../17_deep_learning_architectures/README.md) |
+| **Leads to** | [`21_pytorch_data`](../21_pytorch_data/README.md), [`22_pytorch_training`](../22_pytorch_training/README.md) |
+
+## 📖 Short forms used in this topic
+
+| Term | Full form | What it is |
+|---|---|---|
+| `nn` | `torch.nn` (neural network module) | PyTorch's package of layers and containers |
+| MLP | Multi-Layer Perceptron | Fully-connected network; the notebook's `TwoLayerMLP` |
+| ReLU | Rectified Linear Unit | Activation `max(0, x)` |
+| GELU | Gaussian Error Linear Unit | Smooth activation used in Transformers |
+| FFN | Feed-Forward Network | The per-position MLP inside a Transformer block |
+| LayerNorm | Layer Normalization | Normalizes each sample's features |
+| ID / IDs | Identifier(s) | Integer token indices looked up by `nn.Embedding` |
+| `W`, `b` | Weight matrix, bias | Learnable parameters of `nn.Linear` |
+| DataLoader | (PyTorch class) | Batches data; covered in `21_pytorch_data` |
+
+## 🧠 In plain words
+
+An `nn.Module` is a Lego-style building block: you declare the sub-layers in `__init__` and describe how data flows through them in `forward()`. PyTorch automatically collects every learnable weight in the whole tree, so an optimizer can update them all with one call.
+
+## 🎒 Analogy to remember
+
+A model is a **kitchen recipe card**: `__init__` lists the ingredients and tools (layers), `forward()` lists the steps. The kitchen manager (PyTorch) keeps an inventory of everything that can be adjusted (`parameters()`), and a "tasting mode vs service mode" switch (`train()`/`eval()`) changes how some tools behave. *Where it breaks down:* a recipe is fixed, while a model's ingredient amounts (weights) are learned.
+
 ## Learning objectives
 
 By the end of this topic you can:
@@ -33,11 +65,100 @@ architecture being rebuilt as a module).
 
 ```mermaid
 flowchart LR
-  A["class MyModel(nn.Module)"] --> B["__init__: define sub-layers (nn.Linear, nn.Embedding, ...)"]
+  A["class MyModel(nn.Module)"] --> B["__init__: define sub-layers such as nn.Linear and nn.Embedding"]
   A --> C["forward(x): wire sub-layers together"]
-  B --> D[Parameters auto-registered]
-  D --> E[model.parameters() for the optimizer]
-  C --> F[model(x) calls forward() automatically]
+  B --> D["Parameters auto-registered"]
+  D --> E["model.parameters() for the optimizer"]
+  C --> F["model(x) calls forward automatically"]
+  classDef cls fill:#DBEAFE,stroke:#2563EB,color:#1a1a1a;
+  classDef init fill:#DCFCE7,stroke:#16A34A,color:#1a1a1a;
+  classDef fwd fill:#FEF3C7,stroke:#D97706,color:#1a1a1a;
+  classDef opt fill:#EDE9FE,stroke:#7C3AED,color:#1a1a1a;
+  class A cls;
+  class B,D init;
+  class C,F fwd;
+  class E opt;
+```
+
+## 🔍 Concepts explained
+
+> [!NOTE]
+> Chips: 🟦 containers · 🟩 learnable layers · 🟧 activations/regularizers · 🟪 mode switches.
+
+### 🟦 `nn.Module`
+- **Definition**: base class; sub-layers set as attributes in `__init__` are registered, `forward()` defines computation.
+- **Analogy**: the recipe card.
+- **Code idea**:
+  ```python
+  class TwoLayerMLP(nn.Module):
+      def __init__(self, d_in, d_h, d_out):
+          super().__init__()
+          self.fc1 = nn.Linear(d_in, d_h)
+          self.fc2 = nn.Linear(d_h, d_out)
+      def forward(self, x):
+          return self.fc2(torch.relu(self.fc1(x)))
+  ```
+- **Use when / watch out**: call `model(x)`, not `model.forward(x)`, so hooks and bookkeeping run; call `super().__init__()` first.
+
+### 🟩 `nn.Linear`, `nn.Embedding`, `nn.LayerNorm`
+- **Definition**: `Linear` computes `Y = XWᵀ + b`; `Embedding` looks up a vector per integer ID; `LayerNorm` normalizes each sample's features.
+- **Analogy**: a mixing board; a dictionary from word-ID to vector; a volume normalizer.
+- **Use when / watch out**: `Embedding` takes integer (long) tensors; `Linear` stores `W` as `(out, in)`.
+
+### 🟧 `nn.ReLU`, `nn.GELU`, `nn.Softmax`, `nn.Dropout`
+- **Definition**: activation modules, and Dropout, which randomly zeroes elements in training (survivors are scaled by `1/(1-p)`).
+- **Analogy**: Dropout is randomly benching players in practice so the team doesn't rely on one star.
+- **Use when / watch out**: modules slot into `nn.Sequential`; with `nn.CrossEntropyLoss`, feed raw logits, not softmax output.
+
+### 🟪 `train()` vs `eval()`
+- **Definition**: mode flags that change layer behaviour (Dropout active only in train mode).
+- **Analogy**: practice match vs real match.
+- **Use when / watch out**: `eval()` does not disable gradients; pair it with `torch.no_grad()` for inference.
+
+### 🟦 Parameters
+- **Definition**: `nn.Parameter` tensors registered automatically; `model.parameters()` yields them all.
+- **Analogy**: the inventory of adjustable knobs.
+- **Use when / watch out**: plain tensors stored as attributes are not registered; wrap them in `nn.Parameter` or use `register_buffer` for non-learned state.
+
+### Differences at a glance
+
+| | Layer | Input to it | Learnable? | Behaviour changes in `eval()`? |
+|---|---|---|---|---|
+| 🟩 | `nn.Linear` | float tensor | Yes (W, b) | No |
+| 🟩 | `nn.Embedding` | integer IDs | Yes (table) | No |
+| 🟩 | `nn.LayerNorm` | float tensor | Yes (scale, shift) | No |
+| 🟧 | `nn.ReLU` / `nn.GELU` | float tensor | No | No |
+| 🟧 | `nn.Dropout` | float tensor | No | Yes (becomes identity) |
+| 🟧 | `nn.Softmax` | logits | No | No |
+
+> [!IMPORTANT]
+> Forgetting `model.eval()` at inference leaves Dropout on, giving noisy, non-deterministic predictions.
+
+> [!TIP]
+> `nn.MultiheadAttention` + `nn.LayerNorm` + `nn.Linear` are the building blocks the notebook uses to rebuild the Transformer block from topic 17.
+
+### 🗺️ Concept map
+
+```mermaid
+flowchart TD
+  M["nn.Module"] --> INIT["__init__: declare layers"]
+  M --> FWD["forward: wire layers"]
+  INIT --> LAY
+  subgraph LAY["Layer families"]
+    L1["Linear / Embedding / LayerNorm"]
+    L2["ReLU / GELU / Softmax / Dropout"]
+  end
+  INIT --> PR["Parameters auto-registered"]
+  PR --> OPT["model.parameters() to optimizer"]
+  M --> MD["train() / eval()"]
+  classDef mod fill:#DBEAFE,stroke:#2563EB,color:#1a1a1a;
+  classDef layer fill:#DCFCE7,stroke:#16A34A,color:#1a1a1a;
+  classDef act fill:#FEF3C7,stroke:#D97706,color:#1a1a1a;
+  classDef mode fill:#EDE9FE,stroke:#7C3AED,color:#1a1a1a;
+  class M,INIT,FWD,PR,OPT mod;
+  class L1 layer;
+  class L2 act;
+  class MD mode;
 ```
 
 ## Important APIs / functions

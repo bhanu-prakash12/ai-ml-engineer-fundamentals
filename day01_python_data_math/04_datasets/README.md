@@ -1,5 +1,44 @@
 # 04 — Datasets: Design Principles + Hugging Face `datasets`
 
+> A model is only as good as its data: split correctly, prevent leakage, and use Hugging Face `datasets` to process data at scale.
+
+| | |
+|---|---|
+| **Day** | 1 — Python + Data + Math |
+| **Topic** | 04 — Dataset design + Hugging Face `datasets` |
+| **Notebooks** | 1 (`01_dataset_design_and_hf_datasets`) |
+| **Builds on** | [`03_data_libraries`](../03_data_libraries/README.md) |
+| **Leads to** | [`05_ml_mathematics`](../05_ml_mathematics/README.md), Day 2 evaluation and feature engineering, PyTorch `Dataset` (Day 3) |
+
+## 📖 Short forms used in this topic
+
+| Term | Full form | What it is |
+|---|---|---|
+| **ML** | Machine Learning | Building models that learn from data. |
+| **HF** | Hugging Face | Hub and libraries (`datasets`, `transformers`) for sharing data and models. |
+| **API** | Application Programming Interface | The functions/classes a library exposes. |
+| **LLM** | Large Language Model | Big neural language model; HF `datasets` is used to prepare its fine-tuning data. |
+| **RAM** | Random-Access Memory | Main memory; streaming avoids loading everything into it. |
+| **GB** | Gigabyte | Unit of data size (500GB example). |
+| **NaN / null** | Not a Number / null | Marker for a missing value. |
+| **z-score** | Standard score | `(x - mean) / std`; rescales a feature to mean 0, std 1. |
+| **min-max** | Min-max scaling | `(x - min) / (max - min)`; rescales to `[0, 1]`. |
+| **std** | Standard deviation | Typical spread of values around the mean. |
+| **seed** | Random seed | Integer that fixes a random generator so shuffles/splits are reproducible. |
+| **Dataset / DatasetDict** | - | HF classes: one table of examples / a dict of splits (`train`, `test`, ...). |
+| **IterableDataset** | Iterable dataset | HF streaming dataset that yields examples lazily. |
+| **Arrow** | Apache Arrow | Columnar memory format that backs HF datasets. |
+| **One-hot** | One-hot encoding | Category becomes a vector with a single 1. |
+
+## 🧠 In plain words
+
+A dataset is a collection of examples (each with input features and, for supervised learning, a label). Dataset design is about making sure what you measure in testing honestly predicts real-world behaviour: split the data properly, clean it, scale it without peeking at the test set, and watch for imbalance. Hugging Face `datasets` is a library for loading and transforming such data efficiently.
+
+## 🎒 Analogy to remember
+
+Training is **studying**, validation is a **practice exam** you use to adjust your study plan, and the test set is the **final exam** you sit once. Leakage is **seeing the exam questions while studying** - your score looks great and means nothing.
+*Where it breaks down:* a student cannot unsee the questions, but you can (and must) re-split and retrain when you find leakage.
+
 ## Learning objectives
 
 By the end of this topic you can:
@@ -42,14 +81,102 @@ for dataset manipulation you'll reuse directly when fine-tuning LLMs later in th
 
 ```mermaid
 flowchart LR
-  A[Raw data] --> B[Clean: missing values, outliers, duplicates]
-  B --> C[Split: train / validation / test]
-  C --> D[Fit scalers/encoders on TRAIN ONLY]
-  D --> E[Apply to val/test]
-  E --> F[HF Dataset: map/filter/select/shuffle]
-  F --> G[Batched or streaming processing]
-  G --> H[Ready for a model's DataLoader]
+  subgraph Prep["Prepare"]
+    A["Raw data"] --> B["Clean: missing values, outliers, duplicates"]
+    B --> C["Split: train / validation / test"]
+  end
+  subgraph Fit["Leakage-safe transforms"]
+    D["Fit scalers and encoders on TRAIN ONLY"] --> E["Apply to val and test"]
+  end
+  subgraph HF["Hugging Face datasets"]
+    F["Dataset: map, filter, select, shuffle"] --> G["Batched or streaming processing"]
+  end
+  C --> D
+  E --> F
+  G --> H["Ready for a model DataLoader"]
+  classDef prep fill:#DBEAFE,stroke:#2563EB,color:#1a1a1a;
+  classDef safe fill:#DCFCE7,stroke:#16A34A,color:#1a1a1a;
+  classDef hf fill:#FEF3C7,stroke:#D97706,color:#1a1a1a;
+  classDef goal fill:#EDE9FE,stroke:#7C3AED,color:#1a1a1a;
+  class A,B,C prep;
+  class D,E safe;
+  class F,G hf;
+  class H goal;
 ```
+
+## 🔍 Concepts explained
+
+**Category chips:** 🟦 Splits · 🟥 Data problems · 🟩 Transforms · 🟪 HF `datasets`
+
+### 🟦 Train, validation, test
+
+| Split | Purpose | Touch it when | Pitfall |
+|---|---|---|---|
+| 🟦 Train | fit parameters (and fit scalers/encoders) | always | none, but it must be clean |
+| 🟨 Validation | tune hyperparameters, select models | during development | over-tuning slowly overfits it |
+| 🟥 Test | one final unbiased estimate | once, at the end | tuning on it destroys its value |
+
+### 🟥 Data problems
+
+| Problem | What it looks like | Typical fix | Why it hurts |
+|---|---|---|---|
+| Missing values | NaN/null | drop, or impute (mean/median/constant) | models cannot ingest NaN; dropping can bias |
+| Outliers | extreme values | investigate, cap (winsorize) or remove | distort mean/scale and some models |
+| Duplicates | repeated rows | `drop_duplicates` **before** splitting | copies in train and test leak |
+| Imbalance | one class dominates | resampling, class weights, better metrics | accuracy misleads |
+| Leakage | information from test/future in training | split first, fit transforms on train only | inflated scores that collapse in production |
+
+> [!WARNING]
+> Leakage patterns: (1) scaler/vocabulary fit on the **whole** dataset, (2) duplicates across splits, (3) a feature that encodes the label or only exists after the outcome.
+
+### 🟩 Scaling and encoding
+
+| Technique | Formula / idea | Use when | Pitfall |
+|---|---|---|---|
+| Min-max | `(x - min) / (max - min)` | bounded range wanted | sensitive to outliers |
+| Standardization (z-score) | `(x - mean) / std` | most gradient-based models | needs train-only statistics |
+| One-hot | one 0/1 column per category | nominal categories | many categories means wide data |
+| Label / ordinal | integer per category | ordered categories, tree models | implies false order otherwise |
+
+> [!IMPORTANT]
+> Fit on train only, then apply unchanged to validation and test: `scaler.fit(train)`; `scaler.transform(val)`.
+
+**Imbalance**
+- **Definition:** classes appear in very different proportions.
+- **Analogy:** a smoke alarm that never rings is "99.9% accurate" in a house that rarely burns.
+- **Use when / watch out:** use precision, recall, F1, PR-AUC (Day 2); accuracy alone hides a majority-class predictor.
+
+### 🟪 Hugging Face `datasets`
+
+| Method | Does | Notes |
+|---|---|---|
+| `load_dataset` | load from Hub or local files | returns `Dataset` / `DatasetDict` |
+| `.map(fn, batched=True)` | transform examples | `batched=True` passes lists of examples, far faster |
+| `.filter(fn)` | keep matching rows | predicate returns bool |
+| `.select(indices)` | pick rows by index | |
+| `.shuffle(seed=...)` | random order | set a seed |
+| `.train_test_split(test_size, seed)` | split | reproducible with seed |
+| `.remove_columns` | drop columns | after deriving new ones |
+| `streaming=True` | `IterableDataset` | no full download or load into RAM |
+
+```mermaid
+flowchart TD
+  D["Raw data"] --> C["Deduplicate and clean"]
+  C --> S["Split: train / validation / test"]
+  S --> F["Fit scaler and encoder on TRAIN only"]
+  F --> T["Transform train, val, test"]
+  T --> H["HF Dataset: map / filter / batched / streaming"]
+  X["Fit on all data before splitting"] -.->|"LEAKAGE"| S
+  classDef ok fill:#DCFCE7,stroke:#16A34A,color:#1a1a1a;
+  classDef step fill:#DBEAFE,stroke:#2563EB,color:#1a1a1a;
+  classDef bad fill:#FEE2E2,stroke:#DC2626,color:#1a1a1a;
+  class D,C,S step;
+  class F,T,H ok;
+  class X bad;
+```
+
+> [!TIP]
+> Quick leakage check: if validation accuracy is suspiciously high, look for duplicates across splits and for statistics computed before the split.
 
 ## Important APIs / functions
 

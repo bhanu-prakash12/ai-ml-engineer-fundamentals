@@ -1,0 +1,1377 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>From Lines to Transformers</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'\\[',right:'\\]',display:true},{left:'\\(',right:'\\)',display:false}],throwOnError:false})"></script>
+<style>
+:root{
+  --bg:#0F172A; --panel:#1E293B; --panel2:#162036; --line:#334155;
+  --text:#F1F5F9; --muted:#CBD5E1; --dim:#94A3B8;
+  --indigo:#6366F1; --indigo-t:#A5B4FC; --cyan:#22D3EE; --amber:#F59E0B;
+  --acc:#94A3B8; --acc-t:#E2E8F0;
+  --f-body:Inter,"Segoe UI",system-ui,-apple-system,Helvetica,Arial,sans-serif;
+  --f-head:"Space Grotesk",Inter,"Segoe UI",system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+[data-section="classical"]{--acc:#6366F1;--acc-t:#A5B4FC}
+[data-section="unsup"]{--acc:#22D3EE;--acc-t:#22D3EE}
+[data-section="dl"]{--acc:#F59E0B;--acc-t:#FBBF24}
+[data-section="core"]{--acc:#94A3B8;--acc-t:#E2E8F0}
+html,body{margin:0;height:100%;background:#0B1120;color:var(--text);font-family:var(--f-body);overflow:hidden}
+#deck{position:fixed;left:50%;top:50%;width:1600px;height:900px;background:var(--bg);overflow:hidden;
+  transform-origin:center center;box-shadow:0 0 0 1px #1E293B,0 30px 80px rgba(0,0,0,.5)}
+.slide{position:absolute;inset:0;padding:78px 80px 84px;box-sizing:border-box;display:none;flex-direction:column;gap:16px;
+  font-size:22px;line-height:1.4}
+.slide.active{display:flex}
+h1,h2,h3{font-family:var(--f-head);margin:0;letter-spacing:-.01em}
+h2{font-size:46px;line-height:1.1}
+h2 .k{color:var(--acc-t)}
+h3{font-size:26px;color:var(--acc-t)}
+p{margin:0}
+code,.mono{font-family:var(--f-mono);font-size:.92em}
+.from{font-size:20px;color:var(--dim);margin-top:-8px}
+.from::before{content:"\21A9  ";color:var(--acc-t)}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:44px;flex:1;min-height:0}
+.cols.wl{grid-template-columns:1.15fr .85fr}
+.cols.wr{grid-template-columns:.85fr 1.15fr}
+.col{display:flex;flex-direction:column;gap:14px;min-height:0;min-width:0}
+.viz{justify-content:center}
+.chart{flex:1;min-height:0;display:flex;align-items:center;justify-content:center}
+.chart svg{width:100%;height:100%;display:block}
+.chart svg text{font-family:var(--f-body)}
+.pill{align-self:flex-start;background:var(--amber);color:#0F172A;font-weight:700;padding:7px 18px;border-radius:999px;font-size:23px}
+.hs{display:flex;gap:14px;align-items:flex-start;background:var(--panel);border:1px solid var(--line);border-left:5px solid var(--acc);
+  border-radius:12px;padding:12px 16px}
+.hs .ico{width:34px;height:34px;flex:none;color:var(--amber);margin-top:1px}
+.hs b{color:var(--amber)}
+.eq{font-size:23px}
+.eq .katex-display{margin:2px 0}
+.where{font-size:20px;color:var(--muted)}
+.uw{display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:20px}
+.uw>div{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 14px}
+.uw .ok::before{content:"Use when";display:block;font-weight:700;color:var(--cyan)}
+.uw .no::before{content:"Avoid when";display:block;font-weight:700;color:var(--amber)}
+.foot{display:grid;grid-template-columns:1fr 1fr;gap:28px;font-size:20px;color:var(--muted)}
+.foot>div{border-top:2px solid var(--acc);padding-top:8px}
+.foot b{color:var(--text)}
+.cap{font-size:20px;color:var(--dim);text-align:center;font-style:italic}
+ul.b{margin:0;padding-left:28px}
+ul.b li{margin:5px 0}
+ul.b li::marker{color:var(--acc-t)}
+.hl{color:var(--amber);font-weight:600}
+.ac{color:var(--acc-t);font-weight:600}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 18px}
+.notes{display:none}
+.mm{flex:1;min-height:0;margin:0;display:flex;align-items:center;justify-content:center;font-family:var(--f-body)}
+pre.mermaid:not([data-processed]){visibility:hidden}
+.mm svg{width:100%!important;max-width:100%!important;height:100%!important}
+.slide[data-section="dl"] .mm .node :is(rect,polygon,circle){stroke:var(--amber)!important}
+.slide[data-section="unsup"] .mm .node :is(rect,polygon,circle){stroke:var(--cyan)!important}
+table.t{border-collapse:collapse;font-size:20px;width:100%}
+table.t th,table.t td{border:1px solid var(--line);padding:7px 10px;text-align:left}
+table.t th{background:var(--panel);font-family:var(--f-head);color:var(--acc-t)}
+table.t td.n{text-align:right;font-family:var(--f-mono)}
+/* title slide */
+.title-slide{justify-content:center}
+.title-slide h1{font-size:76px;line-height:1.03;max-width:1000px}
+.title-slide .sub{font-size:32px;color:var(--muted);margin-top:14px;max-width:900px}
+.grad{background:linear-gradient(90deg,#A5B4FC,#22D3EE 50%,#F59E0B);-webkit-background-clip:text;background-clip:text;color:transparent}
+/* chrome */
+#chip{position:absolute;top:26px;left:80px;display:flex;align-items:center;gap:10px;font:600 20px var(--f-head);
+  letter-spacing:.08em;text-transform:uppercase;color:var(--acc-t);z-index:5}
+#chip::before{content:"";width:12px;height:12px;border-radius:3px;background:var(--acc)}
+#progwrap{position:absolute;left:0;right:0;bottom:0;height:6px;background:#1E293B;z-index:5}
+#prog{height:100%;width:0;background:var(--acc);transition:width .3s,background .3s}
+#count{position:absolute;right:80px;bottom:24px;font:600 20px var(--f-mono);color:var(--dim);z-index:5}
+#hint{position:absolute;left:80px;bottom:24px;font-size:20px;color:var(--dim);z-index:5}
+#hint kbd{font-family:var(--f-mono);border:1px solid var(--line);border-radius:5px;padding:0 6px;color:var(--muted)}
+.zone{position:absolute;top:70px;bottom:70px;width:9%;z-index:4;cursor:pointer}
+#zprev{left:0;cursor:w-resize} #znext{right:0;cursor:e-resize}
+#notes{position:fixed;left:0;right:0;bottom:0;height:32vh;background:#111827;border-top:3px solid var(--amber);color:var(--text);
+  padding:18px 28px;box-sizing:border-box;font-size:20px;line-height:1.5;overflow:auto;display:none;z-index:10}
+#notes.open{display:block}
+#notes .meta{font:600 20px var(--f-mono);color:var(--amber);margin-bottom:8px}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="house" viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.5 10v10h4.8v-5.6h3.4V20h4.8V10" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><circle cx="17.5" cy="6" r="1.4" fill="currentColor"/></symbol>
+</defs></svg>
+<div id="deck" data-section="core">
+<div id="chip"></div>
+<div class="zone" id="zprev" title="Previous"></div>
+<div class="zone" id="znext" title="Next"></div>
+
+<!-- ============ 1. OPENING ============ -->
+<section class="slide title-slide active" data-section="core" data-label="Opening" data-min="1">
+  <div class="cols wl" style="align-items:center">
+    <div class="col" style="gap:18px">
+      <div class="from" style="margin:0">Internal engineering training · 60 minutes</div>
+      <h1><span class="grad">From Lines to Transformers</span></h1>
+      <div class="sub">A Practical Tour of Machine Learning &amp; Deep Learning</div>
+      <div class="hs" style="max-width:820px;margin-top:18px"><svg class="ico"><use href="#house"/></svg>
+        <div><b>Running example: HomeScope</b>, a fictional housing-market website. Every algorithm today solves one of its real problems.</div></div>
+    </div>
+    <div class="col viz"><div class="chart" data-chart="hero"></div></div>
+  </div>
+  <aside class="notes">Welcome everyone. Over the next hour we'll go from a straight line to the Transformers behind today's LLMs. One fictional product, HomeScope, ties it all together, and each new algorithm will solve a problem the previous one couldn't. Ask quick questions anytime; save deep dives for the Q&amp;A at the end.</aside>
+</section>
+
+<section class="slide" data-section="core" data-label="Opening" data-min="1">
+  <h2>Why ML <span class="k">now?</span></h2>
+  <div class="cols">
+    <div class="col">
+      <ul class="b">
+        <li><span class="ac">Data:</span> every listing, photo, search and click is logged</li>
+        <li><span class="ac">Compute:</span> GPUs and cloud make big models affordable</li>
+        <li><span class="ac">Algorithms:</span> deep nets, Transformers and boosting matured</li>
+        <li><span class="ac">Tooling:</span> scikit-learn, PyTorch and Hugging Face are open source</li>
+      </ul>
+      <div class="hs"><svg class="ico"><use href="#house"/></svg><div><b>HomeScope</b> has millions of listings, photos and sessions. Rules can't keep up; models can learn from all of it.</div></div>
+    </div>
+    <div class="col viz">
+<pre class="mermaid mm">
+mindmap
+  root((Why ML now))
+    Data
+      Listings
+      Photos
+      Clickstream
+    Compute
+      GPUs
+      Cloud
+    Algorithms
+      Boosting
+      Deep nets
+      Transformers
+    Tooling
+      scikit-learn
+      PyTorch
+</pre>
+    </div>
+  </div>
+  <aside class="notes">Three things came together: lots of data, cheap parallel compute, and better algorithms, plus open-source tooling that makes them easy to use. None of the math is especially new; linear regression is centuries old, and backprop was popularized in 1986. What changed is scale. Keep this brief, about a minute.</aside>
+</section>
+
+<section class="slide" data-section="core" data-label="Opening" data-min="1">
+  <h2>Agenda: an <span class="k">evolution</span></h2>
+  <p class="from">Each step solves a problem the last one couldn't</p>
+<pre class="mermaid mm">
+timeline
+  title HomeScope grows up
+  section Classical ML
+    Regression : Predict sale price
+    Classification : Sells in 30 days? Fraud?
+  section Unsupervised
+    Clustering and PCA : Neighborhood groups
+    Recommenders : Homes you may like
+  section Deep Learning
+    MLP and CNN : Photo condition
+    RNN to Transformer : Descriptions and trends
+    LLMs : Search assistant
+</pre>
+  <aside class="notes">Here's the path. We start with classical supervised learning on tabular data, move to finding structure without labels, then reach deep learning once hand-built features stop working. We finish by connecting everything into one HomeScope architecture and covering how to keep it healthy in production.</aside>
+</section>
+
+<!-- ============ 2. FOUNDATIONS ============ -->
+<section class="slide" data-section="core" data-label="Foundations" data-min="1">
+  <h2>AI ⊃ ML ⊃ DL ⊃ <span class="k">GenAI</span></h2>
+  <p class="from">First, shared vocabulary</p>
+  <div class="cols">
+    <div class="col">
+      <ul class="b">
+        <li><span class="ac">AI:</span> any system that acts intelligently, including hand-written rules</li>
+        <li><span class="ac">ML:</span> learns patterns from data instead of rules</li>
+        <li><span class="ac">Deep learning:</span> ML with many-layer neural networks that learn their own features</li>
+        <li><span class="ac">GenAI:</span> deep models that generate text, images and code</li>
+      </ul>
+      <div class="hs"><svg class="ico"><use href="#house"/></svg><div><b>HomeScope</b> rule: "flag if price &lt; $10k". ML: learn what fraud looks like.</div></div>
+    </div>
+    <div class="col viz"><div class="chart" data-chart="nested"></div><p class="cap">Inspired by Goodfellow et al., <i>Deep Learning</i> (2016), Fig. 1.4</p></div>
+  </div>
+  <aside class="notes">These terms are nested, not competing. A hard-coded rule is AI but not ML. Most production "AI" today is ML, and the newest wave, generative AI, sits inside deep learning. Draw the contrast between writing rules and learning rules from examples.</aside>
+</section>
+
+<section class="slide" data-section="core" data-label="Foundations" data-min="1.5">
+  <h2>Three ways to <span class="k">learn</span></h2>
+  <div class="cols">
+    <div class="col">
+      <ul class="b">
+        <li><span class="ac">Supervised:</span> learn input → known label</li>
+        <li><span class="ac">Unsupervised:</span> find structure with no labels</li>
+        <li><span class="ac">Reinforcement:</span> act, get reward, improve</li>
+        <li><span class="ac">Self-supervised:</span> labels come from the data itself (e.g., next word), which is how LLMs pretrain</li>
+      </ul>
+      <div class="hs"><svg class="ico"><use href="#house"/></svg><div><b>HomeScope:</b> past sale prices are labels; neighborhoods have none; ranking which listings to show learns from clicks.</div></div>
+    </div>
+    <div class="col viz">
+<pre class="mermaid mm">
+flowchart TD
+  ML["Machine Learning"] --> S["Supervised<br/>labeled examples"]
+  ML --> U["Unsupervised<br/>no labels"]
+  ML --> R["Reinforcement<br/>rewards"]
+  S --> S1["Price regression<br/>Fraud classifier"]
+  U --> U1["Neighborhood clusters<br/>Feature compression"]
+  R --> R1["Listing ranking<br/>learned from clicks"]
+</pre>
+    </div>
+  </div>
+  <aside class="notes">Supervised learning is most of industry ML, and most of today's session. Unsupervised learning helps when labels are expensive or don't exist. Mention bandits and RL for ranking, but we won't go deep on them. Self-supervised learning matters because it's how LLMs learn from raw text without human labels; the curriculum lists it as its own category.</aside>
+</section>
+
+<section class="slide" data-section="core" data-label="Foundations" data-min="1">
+  <h2>The ML <span class="k">pipeline</span></h2>
+<pre class="mermaid mm" style="flex:0 0 300px">
+flowchart LR
+  A["Data<br/>listings, sales, photos"] --> B["Features<br/>sqft, age, zip"] --> C["Train<br/>fit model"] --> D["Evaluate<br/>held-out test"] --> E["Deploy<br/>price API"] --> F["Monitor<br/>drift, errors"]
+  F -.->|retrain| A
+</pre>
+  <div class="cols" style="align-items:start">
+    <ul class="b">
+      <li>Split into <span class="ac">train / validation / test</span> and never tune on test</li>
+      <li>Watch for <span class="hl">leakage</span>, e.g. using "final sale date" to predict days-on-market</li>
+    </ul>
+    <div class="hs"><svg class="ico"><use href="#house"/></svg><div><b>HomeScope:</b> split by time (train on 2023, test on 2024) to mimic real future predictions.</div></div>
+  </div>
+  <aside class="notes">The model is maybe 10–20% of the work; data and features dominate. Two classic mistakes are leakage, where information from the future or the test set sneaks into training, and evaluating on the same data you trained on. For time-dependent problems like house prices, split by time, not at random.</aside>
+</section>
+
+<section class="slide" data-section="core" data-label="Foundations" data-min="1.5">
+  <h2>Bias–variance &amp; <span class="k">overfitting</span></h2>
+  <div class="cols">
+    <div class="col">
+      <div class="pill">Too simple misses the pattern; too flexible memorizes noise</div>
+      <div class="eq">\[\mathbb{E}\big[(y-\hat f(x))^2\big]=\text{Bias}^2+\text{Var}+\sigma^2\]</div>
+      <p class="where">Bias: systematic error from wrong assumptions · Var: sensitivity to the training sample · σ²: noise no model can remove</p>
+      <div class="hs"><svg class="ico"><use href="#house"/></svg><div><b>HomeScope:</b> "price = city average" underfits; memorizing every past sale overfits.</div></div>
+      <ul class="b"><li>Fixes: more data, regularization, simpler model, cross-validation</li></ul>
+    </div>
+    <div class="col viz"><div class="chart" data-chart="biasvar"></div><p class="cap">Inspired by Hastie et al., <i>Elements of Statistical Learning</i> &amp; Google ML Crash Course</p></div>
+  </div>
+  <aside class="notes">This is the most important idea in the talk; every algorithm today is a different trade-off on this curve. Training error always falls as complexity grows, but test error is U-shaped. The decomposition holds exactly for squared loss. We'll keep returning to it: regularization, random forests and dropout all reduce variance.</aside>
+</section>
+
+<!-- ============ 3. REGRESSION ============ -->
+<section class="slide" data-section="classical" data-label="Classical ML · Regression" data-min="1.5">
+  <h2>Linear <span class="k">Regression</span></h2>
+  <p class="from">With the vocabulary set, start with the simplest model: a line</p>
+  <div class="cols">
+    <div class="col">
+      <div class="pill">Draw the best straight line through the data</div>
+      <div class="hs"><svg class="ico"><use href="#house"/></svg><div><b>HomeScope:</b> 2,100 sqft, 3 bed, built 1998 → <b>$427k</b> predicted price</div></div>
+      <div class="eq">\[\hat y=\mathbf w^\top\mathbf x+b\qquad \text{MSE}=\tfrac1n\textstyle\sum_i (y_i-\hat y_i)^2\]</div>
+      <p class="where">x: features · w: $ per unit of each feature · b: base price · ŷ: prediction</p>
+      <div class="uw"><div class="ok">Baseline, need explainable weights</div><div class="no">Curved or interacting effects</div></div>
+    </div>
+    <div class="col viz"><div class="chart" data-chart="linreg"></div><p class="cap">Synthetic data · style inspired by scikit-learn docs</p></div>
+  </div>
+  <div class="foot"><div><b>vs. neighbor:</b> the baseline every later model must beat.</div><div><b>At scale:</b> hedonic pricing regression is a long-standing method in real-estate economics (Rosen, 1974).</div></div>
+  <aside class="notes">Each weight has a direct meaning: dollars per extra square foot, holding the others fixed. Least squares has a closed form, w = (XᵀX)⁻¹Xᵀy, and the curriculum shows both it and gradient descent. Always ship a linear baseline first so you know what "good" looks like. About 1.5 minutes.</aside>
+</section>
+
+<section class="slide" data-section="classical" data-label="Classical ML · Regression" data-min="1.5">
+  <h2>Gradient <span class="k">Descent</span></h2>
+  <div class="cols">
+    <div class="col">
+      <div class="pill">Walk downhill on the loss, one step at a time</div>
+      <div class="eq">\[\theta \leftarrow \theta-\eta\,\nabla_\theta L(\theta)\]</div>
+      <p class="where">θ: weights · η: learning rate (step size) · ∇L: slope of the loss</p>
+      <div class="hs"><svg class="ico"><use href="#house"/></svg><div><b>HomeScope:</b> millions of sales and thousands of features: iterate over mini-batches instead of inverting XᵀX</div></div>
+      <ul class="b"><li>Batch · <span class="ac">mini-batch</span> (default) · stochastic</li></ul>
+    </div>
+    <div class="col viz"><div class="chart" data-chart="gd"></div><p class="cap">Inspired by Google ML Crash Course: "Reducing Loss"</p></div>
+  </div>
+  <div class="foot"><div><b>vs. closed form:</b> one exact solve, O(d³) in features; GD is approximate but works for any differentiable loss.</div><div><b>At scale:</b> mini-batch SGD variants train virtually every deep network.</div></div>
+  <aside class="notes">The cyan path uses a good learning rate and converges smoothly. The amber path's rate is too big, so it overshoots and oscillates; any larger and it diverges. This one optimizer idea carries us all the way to Transformers. Only the model and the loss change.</aside>
+</section>
+
+<section class="slide" data-section="classical" data-label="Classical ML · Regression" data-min="1.5">
+  <h2>Polynomial features &amp; <span class="k">Regularization</span></h2>
+  <div class="cols">
+    <div class="col">
+      <div class="pill">Bend the line, then keep it on a leash</div>
+      <div class="hs"><svg class="ico"><use href="#house"/></svg><div><b>HomeScope:</b> price vs. distance to downtown is curved → add x², x³. Lasso drops junk features.</div></div>
+      <div class="eq">\[L_{\text{Ridge}}=\text{MSE}+\lambda\lVert\mathbf w\rVert_2^2 \qquad L_{\text{Lasso}}=\text{MSE}+\lambda\lVert\mathbf w\rVert_1\]</div>
+      <p class="where">λ: penalty strength · Ridge shrinks all weights · Lasso sets some exactly to 0</p>
+      <div class="uw"><div class="ok">Many correlated features; small data</div><div class="no">λ not tuned by cross-validation</div></div>
+    </div>
+    <div class="col viz"><div class="chart" data-chart="poly"></div><p class="cap">Inspired by scikit-learn "Underfitting vs. Overfitting" example</p></div>
+  </div>
+  <div class="foot"><div><b>vs. linear:</b> same model, richer features plus a penalty on large weights.</div><div><b>At scale:</b> L1/L2 penalties appear everywhere, e.g. XGBoost's alpha/lambda and weight decay in deep nets.</div></div>
+  <aside class="notes">A degree-9 polynomial on 12 points chases the noise (amber); that's high variance. With a ridge penalty the same degree-9 model (cyan) is smooth again. The model is still linear in its weights; we only transformed the inputs. Pick λ with cross-validation, never on the test set.</aside>
+</section>
+
+<section class="slide" data-section="classical" data-label="Classical ML · Regression" data-min="1">
+  <h2>Regression <span class="k">metrics</span></h2>
+  <div class="cols">
+    <div class="col">
+      <div class="eq">\[\text{MAE}=\tfrac1n\textstyle\sum|y_i-\hat y_i| \quad \text{RMSE}=\sqrt{\tfrac1n\sum(y_i-\hat y_i)^2}\]</div>
+      <div class="eq">\[R^2=1-\frac{\sum(y_i-\hat y_i)^2}{\sum(y_i-\bar y)^2}\]</div>
+      <p class="where">MAE: typical miss, in $ · RMSE: punishes big misses · R²: share of variance explained (1 = perfect, 0 = predicting the mean)</p>
+      <table class="t"><tr><th>4 homes ($k)</th><th>MAE</th><th>RMSE</th><th>R²</th></tr><tr><td>actual 500/420/610/380</td><td class="n">25</td><td class="n">29.2</td><td class="n">0.89</td></tr></table>
+    </div>
+    <div class="col viz"><div class="chart" data-chart="resid"></div>
+      <div class="hs"><svg class="ico"><use href="#house"/></svg><div><b>HomeScope:</b> tell agents "typically within $25k" (MAE); track RMSE for costly big misses.</div></div></div>
+  </div>
+  <aside class="notes">Predictions were 520, 400, 560 and 390. One $50k miss makes RMSE (29.2) noticeably higher than MAE (25). That gap tells you whether errors are uniform or dominated by a few big misses. R² of 0.89 means we explain 89% of the price variance around the mean. Choose the metric that matches the business cost.</aside>
+</section>
+
+<section class="slide" data-section="classical" data-label="Classical ML · Regression" data-min="0.5">
+  <h2>Regression <span class="k">recap</span>, and its limit</h2>
+  <div class="cols">
+    <div class="col">
+      <ul class="b">
+        <li>Linear model + squared loss + gradient descent</li>
+        <li>Regularize; measure with MAE / RMSE / R²</li>
+        <li class="hl">But a price is a number. HomeScope also asks yes/no questions.</li>
+      </ul>
+      <div class="hs"><svg class="ico"><use href="#house"/></svg><div><b>Next:</b> Will this listing sell within 30 days? Is it fraudulent?</div></div>
+    </div>
+    <div class="col viz">
+<pre class="mermaid mm">
+flowchart LR
+  Q{"What are we<br/>predicting?"} -->|a number| R["Regression<br/>sale price"]
+  Q -->|a category| C["Classification<br/>sells fast, fraud"]
+  Q -->|no label| U["Unsupervised<br/>clusters"]
+</pre>
+    </div>
+  </div>
+  <aside class="notes">A quick checkpoint before we switch from numbers to categories. You could threshold a regression output, but the squared loss is the wrong objective and the outputs aren't probabilities. That's what logistic regression fixes.</aside>
+</section>
+
+<!-- ============ 4. CLASSIFICATION ============ -->
+<section class="slide" data-section="classical" data-label="Classical ML · Classification" data-min="1.5">
+  <h2>Logistic <span class="k">Regression</span></h2>
+  <p class="from">Regression gave us numbers; now we need probabilities of "yes"</p>
+  <div class="cols">
+    <div class="col">
+      <div class="pill">A line, squashed into a probability</div>
+      <div class="hs"><svg class="ico"><use href="#house"/></svg><div><b>HomeScope:</b> priced 3% under area median, 24 photos, spring → <b>P(sells ≤ 30 days) = 0.78</b></div></div>
+      <div class="eq">\[\sigma(z)=\frac{1}{1+e^{-z}},\; z=\mathbf w^\top\mathbf x+b\]</div>
+      <div class="eq">\[L=-\tfrac1n\textstyle\sum\big[y\log p+(1-y)\log(1-p)\big]\]</div>
+      <p class="where">p = σ(z): predicted probability · y ∈ {0,1}: true label · L: log-loss (cross-entropy)</p>
+    </div>
+    <div class="col viz"><div class="chart" data-chart="sigmoid"></div>
+      <div class="uw"><div class="ok">Interpretable baseline, probabilities</div><div class="no">Non-linear boundaries (e.g., XOR)</div></div></div>
+  </div>
+  <div class="foot"><div><b>vs. linear regression:</b> same wᵀx + b, passed through a sigmoid and trained with log-loss.</div><div><b>At scale:</b> large-scale ad click-through prediction at Google (McMahan et al., 2013).</div></div>
+  <aside class="notes">The decision boundary is where z = 0, so it's still a straight line or hyperplane. Each weight shifts the log-odds, which makes it easy to explain to stakeholders. Cross-entropy, not MSE, keeps the optimization convex and well-behaved. For multiple classes, swap the sigmoid for softmax.</aside>
+</section>
+
+<section class="slide" data-section="classical" data-label="Classical ML · Classification" data-min="1">
+  <h2>k-Nearest <span class="k">Neighbors</span></h2>
+  <div class="cols">
+    <div class="col">
+      <div class="pill">You are like your closest neighbors</div>
+      <div class="hs"><svg class="ico"><use href="#house"/></svg><div><b>HomeScope "comps":</b> find the 5 most similar recent listings; 4 sold fast → <b>predict fast</b></div></div>
+      <div class="eq">\[d(\mathbf x,\mathbf x')=\sqrt{\textstyle\sum_j (x_j-x'_j)^2}\]</div>
+      <p class="where">Vote among the k training points with the smallest distance d</p>
+      <div class="uw"><div class="ok">Small data, odd boundaries, no training</div><div class="no">Huge data, many features, unscaled inputs</div></div>
+    </div>
+    <div class="col viz"><div class="chart" data-chart="knn"></div><p class="cap">Inspired by CS231n "Image Classification" notes</p></div>
+  </div>
+  <div class="foot"><div><b>vs. logistic:</b> learns no weights. It's "lazy": all the work happens at query time.</div><div><b>At scale:</b> approximate nearest-neighbor libraries like FAISS (Meta, 2017) power similarity search.</div></div>
+  <aside class="notes">Real-estate appraisers already do this; it's called comparables. Always scale features, or square footage will swamp bedroom counts in the distance. In high dimensions, every point is far from every other (the curse of dimensionality). Choose k by validation: small k overfits, large k underfits.</aside>
+</section>
+
+<section class="slide" data-section="classical" data-label="Classical ML · Classification" data-min="1">
+  <h2>Naive <span class="k">Bayes</span></h2>
+  <div class="cols">
+    <div class="col">
+      <div class="pill">Count the clues, assume they're independent</div>
+      <div class="hs"><svg class="ico"><use href="#house"/></svg><div><b>HomeScope fraud:</b> "wire deposit", "owner overseas", "no viewings" → <b>P(fraud) = 0.93</b></div></div>
+      <div class="eq">\[P(c\mid\mathbf x)\;\propto\;P(c)\prod_j P(x_j\mid c)\]</div>
+      <p class="where">c: class (fraud / legit) · x_j: word j present · P(c): prior · P(x_j | c): word frequency in class c</p>
+      <div class="uw"><div class="ok">Text, tiny data, need speed</div><div class="no">Strongly correlated features</div></div>
+    </div>
+    <div class="col viz">
+<pre class="mermaid mm">
+flowchart LR
+  T["Listing text"] --> W1["wire deposit"]
+  T --> W2["owner overseas"]
+  T --> W3["no viewings"]
+  W1 --> P["Multiply priors<br/>and word likelihoods"]
+  W2 --> P
+  W3 --> P
+  P --> O{"Fraud 0.93<br/>Legit 0.07"}
+</pre>
+    </div>
+  </div>
+  <div class="foot"><div><b>vs. kNN:</b> compares to per-class word statistics, not individual examples. It's a generative model.</div><div><b>At scale:</b> the classic spam-filtering baseline (Sahami et al., 1998; Graham, 2002).</div></div>
+  <aside class="notes">Naive Bayes applies Bayes' theorem with the "naive" assumption that features are independent given the class. That assumption is almost always false, but the classifier often still ranks well; its probabilities tend to be overconfident. In practice, sum log-probabilities and use Laplace smoothing so an unseen word doesn't zero out the product.</aside>
+</section>
+
+<section class="slide" data-section="classical" data-label="Classical ML · Classification" data-min="1.5">
+  <h2>Decision <span class="k">Trees</span></h2>
+  <div class="cols">
+    <div class="col">
+      <div class="pill">20 Questions, learned from data</div>
+      <div class="hs"><svg class="ico"><use href="#house"/></svg><div><b>HomeScope:</b> explain to an agent <i>why</i> a listing is predicted to sell slowly</div></div>
+      <div class="eq">\[G=1-\textstyle\sum_k p_k^2 \qquad H=-\sum_k p_k\log_2 p_k\]</div>
+      <p class="where">p_k: share of class k in a node · pick the split that most reduces Gini G or entropy H</p>
+      <div class="uw"><div class="ok">Explainability, mixed feature types</div><div class="no">Alone: unstable, overfits</div></div>
+    </div>
+    <div class="col viz">
+<pre class="mermaid mm">
+flowchart TD
+  A{"Price above area<br/>median by 10 pct?"} -->|yes| B{"Fewer than<br/>8 photos?"}
+  A -->|no| C{"Listed in<br/>spring?"}
+  B -->|yes| D["Slow<br/>P fast = 0.22"]
+  B -->|no| E["Mixed<br/>P fast = 0.48"]
+  C -->|yes| F["Fast<br/>P fast = 0.81"]
+  C -->|no| G["Fast<br/>P fast = 0.64"]
+</pre>
+    </div>
+  </div>
+  <div class="foot"><div><b>vs. logistic:</b> one straight boundary vs. many axis-aligned boxes; captures interactions automatically.</div><div><b>At scale:</b> CART (Breiman et al., 1984) is the building block of the ensembles that follow.</div></div>
+  <aside class="notes">A tree greedily picks the question that best separates the classes, then recurses. Trees need no feature scaling and handle categorical features and interactions naturally. But a deep tree memorizes the data and small data changes flip its structure; that's high variance. The next two slides fix that in two different ways.</aside>
+</section>
+
+<section class="slide" data-section="classical" data-label="Classical ML · Classification" data-min="1.5">
+  <h2>Random <span class="k">Forests</span></h2>
+  <div class="cols">
+    <div class="col">
+      <div class="pill">Wisdom of the crowd: many noisy trees, one wise vote</div>
+      <div class="hs"><svg class="ico"><use href="#house"/></svg><div><b>HomeScope fraud:</b> 300 trees vote; 271 say fraud → <b>0.90</b>. Feature importance shows "new account" matters most.</div></div>
+      <div class="eq">\[\hat y=\frac1B\sum_{b=1}^{B}T_b(\mathbf x)\]</div>
+      <p class="where">B trees T_b, each trained on a bootstrap sample with a random feature subset at every split</p>
+      <div class="uw"><div class="ok">Strong default, little tuning</div><div class="no">Tight latency, need exact explanations</div></div>
+    </div>
+    <div class="col viz">
+<pre class="mermaid mm">
+flowchart LR
+  D[("Training data")] --> S1["Bootstrap 1"] --> T1["Tree 1"]
+  D --> S2["Bootstrap 2"] --> T2["Tree 2"]
+  D --> S3["Bootstrap B"] --> T3["Tree B"]
+  T1 --> V{"Average<br/>or vote"}
+  T2 --> V
+  T3 --> V
+</pre>
+    </div>
+  </div>
+  <div class="foot"><div><b>vs. one tree:</b> averaging decorrelated trees cuts variance without adding much bias.</div><div><b>At scale:</b> randomized decision forests powered Kinect's body-part recognition (Shotton et al., 2011).</div></div>
+  <aside class="notes">Bagging plus random feature subsets makes the trees disagree in useful ways, and averaging cancels their individual errors. Trees train in parallel. Out-of-bag samples give a free validation estimate. Random forests rarely overfit badly as you add trees; more trees just cost more compute.</aside>
+</section>
+
+<section class="slide" data-section="classical" data-label="Classical ML · Classification" data-min="1.5">
+  <h2>Gradient <span class="k">Boosting</span> <span style="font-size:26px;color:var(--dim)">XGBoost · LightGBM</span></h2>
+  <div class="cols">
+    <div class="col">
+      <div class="pill">Each new tree fixes the last one's mistakes</div>
+      <div class="hs"><svg class="ico"><use href="#house"/></svg><div><b>HomeScope price model:</b> 200 tabular features; MAE drops from $41k → $26k → $19k as trees are added</div></div>
+      <div class="eq">\[F_m(\mathbf x)=F_{m-1}(\mathbf x)+\nu\,h_m(\mathbf x),\quad h_m\approx-\frac{\partial L}{\partial F_{m-1}}\]</div>
+      <p class="where">F_m: ensemble after m trees · h_m: small tree fit to the negative gradient (the residuals, for squared loss) · ν: learning rate</p>
+      <div class="uw"><div class="ok">Tabular data: usually the strongest choice</div><div class="no">Images, raw text, noisy labels without tuning</div></div>
+    </div>
+    <div class="col viz">
+<pre class="mermaid mm">
+flowchart TD
+  T1["Tree 1<br/>rough price"] --> R1["Residuals<br/>what it got wrong"]
+  R1 --> T2["Tree 2<br/>fits residuals"]
+  T2 --> R2["Smaller residuals"]
+  R2 --> T3["Tree 3 ... M"]
+  T3 --> SUM["Sum of all trees<br/>final prediction"]
+</pre>
+    </div>
+  </div>
+  <div class="foot"><div><b>vs. random forest:</b> independent trees averaged (cuts variance) vs. sequential trees correcting errors (cuts bias).</div><div><b>At scale:</b> XGBoost (2016) and LightGBM (2017) dominate tabular competitions; LambdaMART boosted trees for search ranking (Burges, 2010).</div></div>
+  <aside class="notes">This is the slide to remember for tabular work: before reaching for deep learning, try gradient boosting. Boosting does gradient descent in function space, where each tree is a step. It's more sensitive to hyperparameters than random forests (learning rate, depth, number of trees), so use early stopping on a validation set. The MAE numbers on the slide are illustrative.</aside>
+</section>
+
+<section class="slide" data-section="classical" data-label="Classical ML · Classification" data-min="1">
+  <h2>Support Vector <span class="k">Machines</span></h2>
+  <div class="cols">
+    <div class="col">
+      <div class="pill">Draw the widest street between the classes</div>
+      <div class="hs"><svg class="ico"><use href="#house"/></svg><div><b>HomeScope:</b> fraud vs. legit from TF-IDF word features (high-dimensional, ~50k listings)</div></div>
+      <div class="eq">\[\min_{\mathbf w,b}\tfrac12\lVert\mathbf w\rVert^2\;\;\text{s.t.}\;\;y_i(\mathbf w^\top\mathbf x_i+b)\ge1\]</div>
+      <p class="where">margin width = 2/‖w‖ · y_i ∈ {−1,+1} · kernels K(x, x′) give non-linear boundaries</p>
+      <div class="uw"><div class="ok">High-dim, medium-sized data</div><div class="no">Millions of rows, need probabilities</div></div>
+    </div>
+    <div class="col viz"><div class="chart" data-chart="svm"></div><p class="cap">Inspired by scikit-learn "SVM: Maximum margin separating hyperplane"</p></div>
+  </div>
+  <div class="foot"><div><b>vs. logistic:</b> the boundary depends only on the support vectors on the margin, not on every point.</div><div><b>At scale:</b> a leading text classifier before deep learning (Joachims, 1998).</div></div>
+  <aside class="notes">Circled points are the support vectors; move any other point and the boundary doesn't change. The soft-margin version adds slack with a C penalty for overlapping classes. The kernel trick (RBF, polynomial) gives curved boundaries without explicitly computing features, but kernel SVMs scale roughly quadratically with data size.</aside>
+</section>
+
+<section class="slide" data-section="classical" data-label="Classical ML · Classification" data-min="1.5">
+  <h2>Classification <span class="k">metrics</span></h2>
+  <div class="cols">
+    <div class="col">
+      <div class="hs"><svg class="ico"><use href="#house"/></svg><div><b>HomeScope fraud:</b> 100 of 1,000 listings. Always saying "legit" scores 90% accuracy and catches zero fraud.</div></div>
+      <table class="t" style="width:auto"><tr><th></th><th>Pred fraud</th><th>Pred legit</th></tr>
+        <tr><th>Fraud</th><td class="n">TP 80</td><td class="n">FN 20</td></tr>
+        <tr><th>Legit</th><td class="n">FP 30</td><td class="n">TN 870</td></tr></table>
+      <div class="eq">\[P=\tfrac{TP}{TP+FP}=0.73\quad R=\tfrac{TP}{TP+FN}=0.80\quad F_1=\tfrac{2PR}{P+R}=0.76\]</div>
+      <p class="where">Precision: flagged listings that are really fraud · Recall: fraud we caught · ROC: TPR vs. FPR across thresholds</p>
+    </div>
+    <div class="col viz"><div class="chart" data-chart="roc"></div><p class="cap">Inspired by Google ML Crash Course: "ROC and AUC"</p></div>
+  </div>
+  <aside class="notes">Accuracy here is 95%, but the baseline is already 90%, so accuracy alone says little. Precision matters when false alarms are costly (angry legit sellers); recall matters when misses are costly (scammed buyers). ROC-AUC measures ranking quality independent of the threshold. Under heavy imbalance, also check PR-AUC, as the curriculum recommends. Choose the threshold from business costs.</aside>
+</section>
+
+<!-- ============ 5. UNSUPERVISED ============ -->
+<section class="slide" data-section="unsup" data-label="Unsupervised Learning" data-min="1.5">
+  <h2>K-<span class="k">Means</span> Clustering</h2>
+  <p class="from">Classifiers need labels. Neighborhood "types" have none.</p>
+  <div class="cols">
+    <div class="col">
+      <div class="pill">Pick centers, assign, repeat</div>
+      <div class="hs"><svg class="ico"><use href="#house"/></svg><div><b>HomeScope:</b> median price, walkability, days-on-market per neighborhood → 3 segments: "starter suburb", "urban core", "premium"</div></div>
+      <div class="eq">\[J=\sum_{i=1}^{n}\lVert\mathbf x_i-\boldsymbol\mu_{c_i}\rVert^2\]</div>
+      <p class="where">μ_k: center of cluster k · c_i: cluster assigned to point i · alternate: assign → recompute means</p>
+      <div class="uw"><div class="ok">Large data, round similar-sized blobs</div><div class="no">Odd shapes, outliers, unknown k</div></div>
+    </div>
+    <div class="col viz"><div class="chart" data-chart="kmeans"></div><p class="cap">Dashed: centroid paths from a bad start · inspired by scikit-learn clustering docs</p></div>
+  </div>
+  <div class="foot"><div><b>vs. classification:</b> nobody gives the groups; K-Means invents them.</div><div><b>At scale:</b> k-means++ seeding (Arthur &amp; Vassilvitskii, 2007) is scikit-learn's default; widely used for segmentation.</div></div>
+  <aside class="notes">Each iteration can only lower J, so K-Means always converges, though possibly to a local minimum; that's why we use k-means++ and multiple restarts. Choose k with the elbow method or the silhouette score, and sanity-check with domain experts. Scale features first, since it's distance-based like kNN.</aside>
+</section>
+
+<section class="slide" data-section="unsup" data-label="Unsupervised Learning" data-min="1.5">
+  <h2>DBSCAN &amp; <span class="k">Hierarchical</span> clustering</h2>
+  <p class="from">K-Means assumes round blobs and needs k</p>
+  <div class="cols">
+    <div class="col">
+      <div class="pill">Clusters are dense crowds; loners are noise</div>
+      <div class="hs"><svg class="ico"><use href="#house"/></svg><div><b>HomeScope:</b> listing GPS points → curved "hot pockets" along a river; isolated listings marked noise</div></div>
+      <div class="eq">\[x \text{ is core if } |N_\varepsilon(x)|\ge \text{minPts}\]</div>
+      <p class="where">N_ε(x): points within distance ε of x · clusters grow from connected core points</p>
+      <div class="uw"><div class="ok">Any shape, noise, unknown k</div><div class="no">Very different densities</div></div>
+    </div>
+    <div class="col viz" style="gap:6px"><div class="chart" data-chart="dbscan"></div><div class="chart" data-chart="dendro"></div><p class="cap">Inspired by scikit-learn clustering comparison</p></div>
+  </div>
+  <div class="foot"><div><b>vs. K-Means:</b> density, not distance to a center; noise is labeled, not forced into a cluster.</div><div><b>At scale:</b> DBSCAN (Ester et al., 1996) is a classic for spatial data; hierarchical clustering builds taxonomies.</div></div>
+  <aside class="notes">Top chart: DBSCAN recovers two curved clusters and marks scattered points as noise (gray crosses), which K-Means can't do. Bottom chart: agglomerative clustering merges the closest groups step by step; cut the dendrogram at any height to get that many clusters, e.g. metro → district → neighborhood. Hierarchical clustering is O(n²) or worse, so use it on aggregated data.</aside>
+</section>
+
+<section class="slide" data-section="unsup" data-label="Unsupervised Learning" data-min="1.5">
+  <h2>Principal Component <span class="k">Analysis</span></h2>
+  <div class="cols">
+    <div class="col">
+      <div class="pill">Find the directions where the data varies most</div>
+      <div class="hs"><svg class="ico"><use href="#house"/></svg><div><b>HomeScope:</b> 200 listing features → ~10 components. PC1 ≈ "overall size" (sqft, rooms, baths together).</div></div>
+      <div class="eq">\[\Sigma\mathbf v_k=\lambda_k\mathbf v_k,\qquad \text{explained}_k=\frac{\lambda_k}{\sum_j\lambda_j}\]</div>
+      <p class="where">Σ: covariance of centered features · v_k: k-th direction · λ_k: variance along it</p>
+      <div class="uw"><div class="ok">Correlated features, visualizing, denoising</div><div class="no">Non-linear structure, need named features</div></div>
+    </div>
+    <div class="col viz"><div class="chart" data-chart="pca"></div><p class="cap">Inspired by Jolliffe, <i>Principal Component Analysis</i>, and scikit-learn docs</p></div>
+  </div>
+  <div class="foot"><div><b>vs. clustering:</b> clustering groups rows; PCA compresses columns.</div><div><b>At scale:</b> Eigenfaces (Turk &amp; Pentland, 1991) used PCA for face recognition; still a standard preprocessing step.</div></div>
+  <aside class="notes">Standardize first, or the feature with the biggest units dominates. In practice PCA is computed with the SVD, which the curriculum covers. Projecting onto the top components keeps most of the variance with far fewer dimensions, which speeds up downstream models and enables 2-D plots. For non-linear visualization, mention t-SNE and UMAP.</aside>
+</section>
+
+<section class="slide" data-section="unsup" data-label="Unsupervised Learning" data-min="1">
+  <h2>Anomaly <span class="k">Detection</span></h2>
+  <div class="cols">
+    <div class="col">
+      <div class="pill">Learn "normal", flag what isn't</div>
+      <div class="hs"><svg class="ico"><use href="#house"/></svg><div><b>HomeScope:</b> 3,400 sqft waterfront at $90/sqft from a 1-day-old account → score 0.81 → <b>review queue</b></div></div>
+      <div class="eq">\[s(x,n)=2^{-\mathbb E[h(x)]/c(n)}\]</div>
+      <p class="where">Isolation Forest: h(x) = splits needed to isolate x · c(n): average path length · s → 1 = anomalous</p>
+      <div class="uw"><div class="ok">Few or no fraud labels, new scam types</div><div class="no">Labeled fraud is plentiful (use supervised)</div></div>
+    </div>
+    <div class="col viz"><div class="chart" data-chart="anomaly"></div><p class="cap">Synthetic data · inspired by scikit-learn outlier-detection examples</p></div>
+  </div>
+  <div class="foot"><div><b>vs. supervised fraud model:</b> needs no labels, so it can catch never-seen patterns.</div><div><b>At scale:</b> Isolation Forest (Liu, Ting &amp; Zhou, 2008) is a standard unsupervised outlier detector.</div></div>
+  <aside class="notes">Outliers are easy to isolate with random splits, so they have short average path lengths. Other options include z-scores or Mahalanobis distance for simple data, and autoencoder reconstruction error, which we'll see in deep learning. In practice, combine both: anomaly scores feed a supervised fraud model, and analyst decisions become new labels.</aside>
+</section>
+
+<!-- ============ 6. RECOMMENDATION ============ -->
+<section class="slide" data-section="unsup" data-label="Recommendation Systems" data-min="1.5">
+  <h2>Collaborative filtering → <span class="k">Matrix Factorization</span></h2>
+  <p class="from">Clusters describe groups, but every buyer's taste is personal</p>
+  <div class="cols wr">
+    <div class="col">
+      <div class="pill">People who liked what you liked…</div>
+      <div class="hs"><svg class="ico"><use href="#house"/></svg><div><b>HomeScope:</b> users × homes matrix of saves and views, 99% empty → fill in the blanks → "Homes you may like"</div></div>
+      <div class="eq">\[\min_{P,Q}\!\sum_{(u,i)\in\mathcal K}\!(r_{ui}-\mathbf p_u^\top\mathbf q_i)^2+\lambda(\lVert\mathbf p_u\rVert^2+\lVert\mathbf q_i\rVert^2)\]</div>
+      <p class="where">r_ui: known rating · p_u, q_i: learned user and home vectors · 𝒦: observed cells only</p>
+      <div class="uw"><div class="ok">Rich interaction history</div><div class="no">New users or listings (cold start)</div></div>
+    </div>
+    <div class="col viz"><div class="chart" data-chart="mf"></div><p class="cap">Inspired by Koren, Bell &amp; Volinsky, "Matrix Factorization Techniques for Recommender Systems" (2009)</p></div>
+  </div>
+  <div class="foot"><div><b>vs. content-based:</b> uses only behavior, no house features, so it finds non-obvious tastes.</div><div><b>At scale:</b> matrix factorization was popularized by the Netflix Prize (2006–2009).</div></div>
+  <aside class="notes">Classic collaborative filtering is neighborhood-based: find similar users or items. Matrix factorization learns a short vector for each user and each home whose dot product predicts the rating, trained only on observed cells with SGD or alternating least squares. The learned dimensions often turn out to mean something, like "urban vs. suburban" or "fixer-upper tolerance". Those vectors are our first embeddings.</aside>
+</section>
+
+<section class="slide" data-section="unsup" data-label="Recommendation Systems" data-min="1">
+  <h2>From IDs to <span class="k">embeddings</span>: two-tower retrieval</h2>
+  <div class="cols wr">
+    <div class="col">
+      <div class="pill">Users and homes in the same vector space</div>
+      <div class="hs"><svg class="ico"><use href="#house"/></svg><div><b>HomeScope:</b> a brand-new listing gets a vector from its photos, text and price on day one, with no saves needed</div></div>
+      <div class="eq">\[s(u,i)=\mathbf u^\top\mathbf v_i\]</div>
+      <p class="where">u: user-tower output · v_i: home-tower output · top-k by approximate nearest-neighbor search</p>
+    </div>
+    <div class="col viz">
+<pre class="mermaid mm">
+flowchart LR
+  U["User features<br/>history, searches"] --> UT["User tower<br/>neural net"] --> UE(("user<br/>vector"))
+  H["Home features<br/>photos, text, price"] --> HT["Home tower<br/>neural net"] --> HE(("home<br/>vector"))
+  UE --> S{"dot product"}
+  HE --> S
+  S --> R["Top-k homes"]
+</pre>
+    </div>
+  </div>
+  <div class="foot"><div><b>vs. MF:</b> MF learns one vector per ID; towers compute vectors from features, which solves cold start.</div><div><b>At scale:</b> YouTube's deep neural recommender (Covington et al., 2016) generalized MF this way.</div></div>
+  <aside class="notes">This is the bridge from classical recommenders to deep learning. Each tower is a neural network, and the matrix-factorization dot product survives as the scoring function. Retrieval uses a vector index; a heavier ranking model, often gradient boosting or a deep net, then reorders the top few hundred.</aside>
+</section>
+
+<!-- ============ 7. BRIDGE ============ -->
+<section class="slide" data-section="dl" data-label="Bridge to Deep Learning" data-min="1">
+  <h2>When features get too hard to <span class="k">hand-engineer</span></h2>
+  <div class="cols">
+    <div class="col">
+      <div class="hs"><svg class="ico"><use href="#house"/></svg><div><b>HomeScope inventory:</b> forecast active listings per city per month. Lags + month + boosting is a strong baseline.</div></div>
+      <div class="eq">\[\hat y_{t+1}=f\big(y_t,\,y_{t-1},\,y_{t-12},\,\text{month}\big)\]</div>
+      <p class="where">y_t: listings this month · y_{t−12}: same month last year (seasonality) · f: e.g. GBM</p>
+      <ul class="b">
+        <li class="hl">But: a photo is ~150k pixels. A description is free text.</li>
+        <li>Hand-crafting "has granite counters" features doesn't scale</li>
+        <li>We need models that <span class="ac">learn the features</span></li>
+      </ul>
+    </div>
+    <div class="col viz"><div class="chart" data-chart="ts"></div><p class="cap">Synthetic series · classical options: ARIMA, Prophet (Taylor &amp; Letham, 2018)</p></div>
+  </div>
+  <aside class="notes">Time series on tabular aggregates is still classical territory: lag features, rolling means and calendar features fed to gradient boosting, or statistical models like ARIMA and Prophet. Always validate with a time-based split. The turning point is unstructured data. Nobody can hand-write features for "kitchen looks renovated" from pixels, and that's exactly where deep learning wins.</aside>
+</section>
+
+<section class="slide" data-section="dl" data-label="Bridge to Deep Learning" data-min="1">
+  <h2>Classical ML vs. <span class="k">Deep Learning</span></h2>
+  <div class="cols">
+    <div class="col">
+      <table class="t">
+        <tr><th></th><th>Classical ML</th><th>Deep learning</th></tr>
+        <tr><td>Features</td><td>Hand-engineered</td><td>Learned from raw data</td></tr>
+        <tr><td>Data needed</td><td>Hundreds to millions of rows</td><td>Usually much more, or pretrained</td></tr>
+        <tr><td>Compute</td><td>CPU, minutes</td><td>GPUs, hours to weeks</td></tr>
+        <tr><td>Interpretability</td><td>Often high</td><td>Low; needs tooling</td></tr>
+        <tr><td>Best on</td><td>Tabular</td><td>Images, text, audio</td></tr>
+      </table>
+    </div>
+    <div class="col viz">
+<pre class="mermaid mm">
+quadrantChart
+  title Data size vs interpretability
+  x-axis Small data --> Big data
+  y-axis Black box --> Interpretable
+  quadrant-1 Scales and explains
+  quadrant-2 Small and transparent
+  quadrant-3 Small and opaque
+  quadrant-4 Big and opaque
+  Linear: [0.15, 0.9]
+  Tree: [0.28, 0.78]
+  kNN: [0.2, 0.64]
+  Random forest: [0.6, 0.64]
+  Boosting: [0.72, 0.56]
+  CNN: [0.72, 0.26]
+  Transformer: [0.82, 0.1]
+</pre>
+    </div>
+  </div>
+  <aside class="notes">This isn't a competition; production systems use both. Pretrained models change the "data needed" row: fine-tuning a pretrained CNN can work with a few thousand labeled photos. Positions on the chart are qualitative, not measured.</aside>
+</section>
+
+<!-- ============ 8. DEEP LEARNING ============ -->
+<section class="slide" data-section="dl" data-label="Deep Learning" data-min="1.5">
+  <h2>Perceptron → <span class="k">MLP</span></h2>
+  <p class="from">Let the model learn its own features</p>
+  <div class="cols">
+    <div class="col">
+      <div class="pill">Stack simple neurons; the non-linearity makes it powerful</div>
+      <div class="hs"><svg class="ico"><use href="#house"/></svg><div><b>HomeScope:</b> tabular features + photo/text embeddings → hidden layers → <b>price</b></div></div>
+      <div class="eq">\[\mathbf a^{(l)}=f\big(W^{(l)}\mathbf a^{(l-1)}+\mathbf b^{(l)}\big)\]</div>
+      <p class="where">W, b: layer weights and biases · f: activation · a^(0) = x. Without f, stacked layers collapse to one linear map.</p>
+      <div class="uw"><div class="ok">Many interacting features, lots of data</div><div class="no">Small tabular data (use boosting)</div></div>
+    </div>
+    <div class="col viz"><div class="chart" data-chart="mlp"></div><p class="cap">Inspired by Goodfellow et al., <i>Deep Learning</i>, ch. 6</p></div>
+  </div>
+  <div class="foot"><div><b>vs. logistic regression:</b> logistic = one neuron with a sigmoid; an MLP stacks many and learns intermediate features.</div><div><b>At scale:</b> universal approximation (Cybenko, 1989; Hornik, 1991); dense layers sit inside every modern network.</div></div>
+  <aside class="notes">A perceptron is a weighted sum plus a step function, the historical ancestor. Each MLP layer is Y = XW + b followed by a non-linearity, the same shape reasoning as linear regression, repeated. Hidden layers learn useful intermediate features automatically; that's the core promise of deep learning.</aside>
+</section>
+
+<section class="slide" data-section="dl" data-label="Deep Learning" data-min="1">
+  <h2>Activation <span class="k">functions</span></h2>
+  <div class="cols">
+    <div class="col">
+      <div class="pill">The bend that lets networks learn curves</div>
+      <div class="eq">\[\text{ReLU}(z)=\max(0,z)\quad \sigma(z)=\tfrac{1}{1+e^{-z}}\quad \tanh(z)\]</div>
+      <div class="eq">\[\text{softmax}(\mathbf z)_i=\frac{e^{z_i}}{\sum_j e^{z_j}}\]</div>
+      <p class="where">ReLU: default hidden layer · sigmoid / tanh saturate → vanishing gradients · softmax: multi-class output</p>
+      <div class="hs"><svg class="ico"><use href="#house"/></svg><div><b>HomeScope outputs:</b> linear → price · sigmoid → P(sells fast) · softmax → room type</div></div>
+    </div>
+    <div class="col viz"><div class="chart" data-chart="act"></div><p class="cap">Inspired by CS231n "Neural Networks Part 1"</p></div>
+  </div>
+  <div class="foot"><div><b>vs. perceptron step:</b> smooth (or piecewise-linear) functions let gradients flow.</div><div><b>At scale:</b> ReLU sped up AlexNet's training (2012); GELU is used in BERT and GPT-style Transformers.</div></div>
+  <aside class="notes">For a sigmoid, the gradient is at most 0.25, and it's near zero when the unit saturates. Multiply that across many layers and the gradients vanish. ReLU has gradient 1 for positive inputs, which is a big reason deep nets became trainable. GELU is a smooth ReLU-like variant common in Transformers.</aside>
+</section>
+
+<section class="slide" data-section="dl" data-label="Deep Learning" data-min="1.5">
+  <h2><span class="k">Backpropagation</span></h2>
+  <div class="cols">
+    <div class="col">
+      <div class="pill">Blame flows backward through the chain rule</div>
+      <div class="hs"><svg class="ico"><use href="#house"/></svg><div><b>HomeScope:</b> predicted $480k, sold $440k → every weight is nudged by its share of the $40k error</div></div>
+      <div class="eq">\[\boldsymbol\delta^{(l)}=\big(W^{(l+1)\top}\boldsymbol\delta^{(l+1)}\big)\odot f'(\mathbf z^{(l)})\]</div>
+      <div class="eq">\[\frac{\partial L}{\partial W^{(l)}}=\boldsymbol\delta^{(l)}\,\mathbf a^{(l-1)\top}\]</div>
+      <p class="where">δ^(l): error signal at layer l · reused from the layer above, which is why it's efficient · ⊙: element-wise</p>
+    </div>
+    <div class="col viz">
+<pre class="mermaid mm">
+flowchart TD
+  X["x: listing features"] --> Z1["z1 = W1 x + b1"]
+  Z1 --> A1["a1 = ReLU of z1"]
+  A1 --> Y["y hat = W2 a1 + b2"]
+  Y --> L["Loss vs true price"]
+  L -. "dL / dW2" .-> Y
+  Y -. "delta1" .-> A1
+  A1 -. "dL / dW1" .-> Z1
+</pre>
+    </div>
+  </div>
+  <div class="foot"><div><b>vs. gradient descent:</b> GD decides how to step; backprop computes the gradient for millions of weights in one backward pass.</div><div><b>At scale:</b> popularized by Rumelhart, Hinton &amp; Williams (1986); automated today by autograd in PyTorch, JAX and TensorFlow.</div></div>
+  <aside class="notes">Solid arrows are the forward pass; we cache the intermediate z and a values. Dotted arrows are the backward pass: start from the loss and apply the chain rule layer by layer, reusing the downstream gradient each time. Backward costs roughly the same as forward. You'll almost never write it by hand. loss.backward() does it, but knowing it helps you debug exploding or vanishing gradients.</aside>
+</section>
+
+<section class="slide" data-section="dl" data-label="Deep Learning" data-min="1.5">
+  <h2>Optimizers: <span class="k">SGD → Adam</span></h2>
+  <div class="cols">
+    <div class="col">
+      <div class="pill">Same downhill walk, smarter footsteps</div>
+      <div class="eq">\[m_t=\beta_1m_{t-1}+(1-\beta_1)g_t\quad v_t=\beta_2v_{t-1}+(1-\beta_2)g_t^2\]</div>
+      <div class="eq">\[\theta_t=\theta_{t-1}-\eta\,\frac{\hat m_t}{\sqrt{\hat v_t}+\epsilon},\quad \hat m_t=\tfrac{m_t}{1-\beta_1^t},\;\hat v_t=\tfrac{v_t}{1-\beta_2^t}\]</div>
+      <p class="where">g: gradient · m: momentum (mean) · v: mean squared gradient → per-weight step size · typical β₁=0.9, β₂=0.999</p>
+      <div class="hs"><svg class="ico"><use href="#house"/></svg><div><b>HomeScope photo model:</b> Adam converges in fewer epochs; tuned SGD + momentum may generalize as well</div></div>
+    </div>
+    <div class="col viz"><div class="chart" data-chart="optim"></div><p class="cap">Illustrative curves · inspired by Kingma &amp; Ba (2015), Fig. 2</p></div>
+  </div>
+  <div class="foot"><div><b>vs. plain SGD:</b> one global learning rate vs. adaptive per-parameter steps plus momentum.</div><div><b>At scale:</b> Adam (Kingma &amp; Ba, 2015) and AdamW (Loshchilov &amp; Hutter, 2019) are default choices for Transformers.</div></div>
+  <aside class="notes">Momentum smooths noisy mini-batch gradients and speeds up travel along consistent directions. Adam adds per-parameter scaling, so rarely updated weights take bigger steps. The bias correction fixes the zero-initialized moments in early steps. In practice, use AdamW with warmup and a learning-rate decay schedule. The learning rate is still the most important hyperparameter.</aside>
+</section>
+
+<section class="slide" data-section="dl" data-label="Deep Learning" data-min="1.5">
+  <h2>Convolutional Neural <span class="k">Networks</span></h2>
+  <p class="from">An MLP treats a 224×224×3 photo as 150k unrelated numbers</p>
+  <div class="cols">
+    <div class="col">
+      <div class="pill">Slide small pattern detectors across the image</div>
+      <div class="hs"><svg class="ico"><use href="#house"/></svg><div><b>HomeScope photo:</b> → room type <b>kitchen 0.94</b> · condition <b>needs renovation 0.71</b></div></div>
+      <div class="eq">\[S(i,j)=\sum_m\sum_n I(i+m,\,j+n)\,K(m,n)\]</div>
+      <p class="where">I: image · K: learned 3×3 kernel · S: feature map. The same K is reused everywhere (weight sharing).</p>
+      <div class="uw"><div class="ok">Images, spatial grids</div><div class="no">Tabular data; few labels without pretraining</div></div>
+    </div>
+    <div class="col viz"><div class="chart" data-chart="cnn"></div><p class="cap">Real convolution of an 8×8 "house" with a vertical-edge kernel · inspired by CS231n</p></div>
+  </div>
+  <div class="foot"><div><b>vs. MLP:</b> local connections + shared weights = far fewer parameters, and spatial structure is respected.</div><div><b>At scale:</b> AlexNet won ImageNet (ILSVRC) 2012, launching the deep-learning era in vision.</div></div>
+  <aside class="notes">Strictly speaking, frameworks implement cross-correlation (no kernel flip) but call it convolution; the formula shown is what PyTorch computes. In the diagram, the kernel responds positively to left-to-right dark-to-bright edges and negatively to the opposite. ReLU keeps the positives and max-pooling downsamples. The network learns these kernels itself.</aside>
+</section>
+
+<section class="slide" data-section="dl" data-label="Deep Learning" data-min="1">
+  <h2>CNNs in practice: <span class="k">edges → objects</span></h2>
+<pre class="mermaid mm" style="flex:0 0 260px">
+flowchart LR
+  I["Listing photo<br/>224 x 224 x 3"] --> C1["Conv + ReLU<br/>edges"] --> P1["Pool"] --> C2["Conv + ReLU<br/>textures"] --> P2["Pool"] --> C3["Conv + ReLU<br/>cabinets, windows"] --> F["Dense + softmax<br/>room type"]
+</pre>
+  <div class="cols" style="align-items:start">
+    <ul class="b">
+      <li>Early layers detect edges; deeper layers detect parts and objects</li>
+      <li><span class="ac">Transfer learning:</span> start from an ImageNet-pretrained model, then fine-tune</li>
+      <li><span class="ac">Residual connections</span> made 100+ layer nets trainable (ResNet, He et al., 2015)</li>
+    </ul>
+    <div class="col">
+      <div class="hs"><svg class="ico"><use href="#house"/></svg><div><b>HomeScope:</b> fine-tune a pretrained ResNet on a few thousand labeled listing photos instead of training from scratch</div></div>
+      <div class="foot" style="grid-template-columns:1fr"><div><b>At scale:</b> pretrained CNN backbones are standard for image classification and detection.</div></div>
+    </div>
+  </div>
+  <aside class="notes">The feature hierarchy, edges then textures then parts then objects, was shown visually by Zeiler and Fergus in 2014. Practically: never train a vision model from scratch for a product feature; fine-tune a pretrained backbone. Vision Transformers are a strong alternative today, but CNNs remain efficient and common.</aside>
+</section>
+
+<section class="slide" data-section="dl" data-label="Deep Learning" data-min="1.5">
+  <h2>RNN &amp; <span class="k">LSTM</span></h2>
+  <p class="from">CNNs see grids. Price trends and text are sequences where order matters.</p>
+  <div class="cols">
+    <div class="col">
+      <div class="pill">Read one step at a time; carry a memory</div>
+      <div class="hs"><svg class="ico"><use href="#house"/></svg><div><b>HomeScope:</b> 36 months of zip-level median price → next month's value</div></div>
+      <div class="eq">\[\mathbf h_t=\tanh(W_h\mathbf h_{t-1}+W_x\mathbf x_t+\mathbf b)\]</div>
+      <div class="eq">\[\mathbf c_t=\mathbf f_t\odot\mathbf c_{t-1}+\mathbf i_t\odot\tilde{\mathbf c}_t\]</div>
+      <p class="where">h_t: hidden state · c_t: LSTM cell memory · f, i: forget / input gates that control what's kept</p>
+    </div>
+    <div class="col viz">
+<pre class="mermaid mm">
+flowchart LR
+  x1["Jan"] --> h1(("h1"))
+  x2["Feb"] --> h2(("h2"))
+  x3["Mar"] --> h3(("h3"))
+  h1 --> h2
+  h2 --> h3
+  h3 --> y["Apr<br/>forecast"]
+</pre>
+      <div class="uw"><div class="ok">Streaming, short-to-medium sequences</div><div class="no">Long context; need parallel training</div></div>
+    </div>
+  </div>
+  <div class="foot"><div><b>vs. MLP:</b> shares the same weights across time steps, so it handles any sequence length.</div><div><b>At scale:</b> LSTMs (Hochreiter &amp; Schmidhuber, 1997) powered Google's Neural Machine Translation (Wu et al., 2016).</div></div>
+  <aside class="notes">A vanilla RNN multiplies by the same matrix at every step, so gradients vanish or explode over long sequences. LSTM gates create a path that lets information and gradients travel further. GRU is a lighter variant. Two limits remain: the whole past is squeezed into one fixed-size vector, and steps must be computed one after another, which is slow on GPUs. Attention fixes both.</aside>
+</section>
+
+<section class="slide" data-section="dl" data-label="Deep Learning" data-min="1.5">
+  <h2><span class="k">Attention</span></h2>
+  <p class="from">An LSTM squeezes the whole past through one hidden state</p>
+  <div class="cols">
+    <div class="col">
+      <div class="pill">Look at what matters</div>
+      <div class="hs"><svg class="ico"><use href="#house"/></svg><div><b>HomeScope:</b> "sunny 3-bed near park, new roof": <b>roof</b> attends to <b>new</b>; <b>park</b> to <b>near</b></div></div>
+      <div class="eq">\[\text{Attention}(Q,K,V)=\text{softmax}\!\left(\frac{QK^\top}{\sqrt{d_k}}\right)V\]</div>
+      <p class="where">Q: what each token looks for · K: what each token offers · V: content passed along · √d_k keeps scores from saturating the softmax</p>
+    </div>
+    <div class="col viz"><div class="chart" data-chart="attn"></div><p class="cap">Rows sum to 1 · inspired by Jay Alammar, "The Illustrated Transformer"</p></div>
+  </div>
+  <div class="foot"><div><b>vs. RNN:</b> every token connects directly to every other; no step-by-step bottleneck.</div><div><b>At scale:</b> introduced for translation (Bahdanau et al., 2014); the Transformer (2017) made it the core operation.</div></div>
+  <aside class="notes">Each token produces a query, a key and a value by multiplying its embedding by learned matrices. Query–key dot products give relevance scores; softmax turns each row into weights that sum to 1, and the output is a weighted average of values. Dividing by √d_k matters: with large dimensions, dot products grow and would push the softmax into near one-hot regions with tiny gradients.</aside>
+</section>
+
+<section class="slide" data-section="dl" data-label="Deep Learning" data-min="1.5">
+  <h2>The <span class="k">Transformer</span></h2>
+  <div class="cols">
+    <div class="col">
+      <div class="pill">Attention + feed-forward, stacked, all in parallel</div>
+      <div class="hs"><svg class="ico"><use href="#house"/></svg><div><b>HomeScope:</b> read descriptions → extract amenities ("pool", "EV charger") and flag misleading claims</div></div>
+      <div class="eq">\[\text{MultiHead}=\text{Concat}(\text{head}_1,\dots,\text{head}_h)\,W^O\]</div>
+      <p class="where">each head = attention with its own Q, K, V projections · positional encodings add word order</p>
+      <div class="uw"><div class="ok">Text, long context, lots of data or pretrained</div><div class="no">Tiny data, tight compute (cost is O(n²) in length)</div></div>
+    </div>
+    <div class="col viz">
+<pre class="mermaid mm">
+flowchart TD
+  T["Tokens of listing text"] --> E["Embeddings + positions"]
+  E --> MHA["Multi-head self-attention"]
+  MHA --> N1["Add and LayerNorm"]
+  N1 --> FF["Feed-forward MLP"]
+  FF --> N2["Add and LayerNorm"]
+  N2 --> O["Repeat N times, then task head"]
+  E -. residual .-> N1
+  N1 -. residual .-> N2
+</pre>
+    </div>
+  </div>
+  <div class="foot"><div><b>vs. LSTM:</b> processes all positions at once, so it trains far faster on GPUs and captures long-range links.</div><div><b>At scale:</b> "Attention Is All You Need" (Vaswani et al., 2017); BERT (2018) was applied to Google Search in 2019.</div></div>
+  <aside class="notes">A Transformer block is just self-attention plus a small MLP, wrapped in residual connections and layer normalization, then stacked. Encoder-only models like BERT suit understanding tasks such as our amenity extraction; decoder-only models like GPT generate text. Attention cost grows quadratically with sequence length, which is why context length is expensive.</aside>
+</section>
+
+<section class="slide" data-section="dl" data-label="Deep Learning" data-min="1">
+  <h2><span class="k">Embeddings</span></h2>
+  <div class="cols">
+    <div class="col">
+      <div class="pill">Meaning as geometry: similar things sit close</div>
+      <div class="hs"><svg class="ico"><use href="#house"/></svg><div><b>HomeScope search:</b> "cozy retreat by the water" matches <b>lake cottage</b> listings with no shared keywords</div></div>
+      <div class="eq">\[\cos\theta=\frac{\mathbf a\cdot\mathbf b}{\lVert\mathbf a\rVert\,\lVert\mathbf b\rVert}\]</div>
+      <p class="where">a, b: embedding vectors · 1 = same direction (similar), 0 = unrelated</p>
+      <div class="uw"><div class="ok">Semantic search, recommendations, RAG</div><div class="no">Exact matching (IDs, prices, filters)</div></div>
+    </div>
+    <div class="col viz"><div class="chart" data-chart="emb"></div><p class="cap">2-D projection, illustrative · inspired by TensorFlow Embedding Projector</p></div>
+  </div>
+  <div class="foot"><div><b>vs. one-hot:</b> one-hot puts every word equally far apart; learned dense vectors encode similarity.</div><div><b>At scale:</b> word2vec (Mikolov et al., 2013) popularized learned word vectors; vector search underpins modern RAG.</div></div>
+  <aside class="notes">We've already met embeddings three times: MF user and home vectors, two-tower outputs, and the Transformer's input layer. Real embeddings have hundreds of dimensions; this plot is a 2-D illustration. Combine vector search with hard filters, such as price and beds, because embeddings are fuzzy by design.</aside>
+</section>
+
+<section class="slide" data-section="dl" data-label="Deep Learning" data-min="1.5">
+  <h2>Generative models: <span class="k">AE · GAN · Diffusion</span></h2>
+  <div class="cols wr">
+    <div class="col">
+      <div class="pill">Learn the data distribution, then sample from it</div>
+      <div class="hs"><svg class="ico"><use href="#house"/></svg><div><b>HomeScope:</b> virtual staging (furnish an empty room); autoencoder error flags corrupted or doctored photos</div></div>
+      <div class="eq">\[\min_G\max_D\;\mathbb E[\log D(x)]+\mathbb E[\log(1-D(G(z)))]\]</div>
+      <div class="eq">\[L_{\text{diff}}=\mathbb E\,\lVert\boldsymbol\epsilon-\boldsymbol\epsilon_\theta(x_t,t)\rVert^2\]</div>
+      <p class="where">G: generator · D: discriminator · ε_θ: network predicting the noise added at step t</p>
+    </div>
+    <div class="col viz">
+<pre class="mermaid mm">
+flowchart TB
+  subgraph AE["Autoencoder"]
+    direction LR
+    a1["Photo"] --> a2["Encoder"] --> a3(("code z")) --> a4["Decoder"] --> a5["Rebuilt photo"]
+  end
+  subgraph GAN["GAN"]
+    direction LR
+    g1["Noise"] --> g2["Generator"] --> g3["Fake"] --> g4{"Discriminator"}
+    g5["Real"] --> g4
+  end
+  subgraph DIF["Diffusion"]
+    direction LR
+    d1["Pure noise"] --> d2["Denoise"] --> d3["Denoise"] --> d4["Image"]
+  end
+  AE ~~~ GAN ~~~ DIF
+</pre>
+    </div>
+  </div>
+  <div class="foot"><div><b>vs. discriminative models:</b> those learn P(y | x); generative models learn P(x) and can create new samples.</div><div><b>At scale:</b> GANs (Goodfellow et al., 2014); DDPM diffusion (Ho et al., 2020) underlies image generators such as Stable Diffusion.</div></div>
+  <aside class="notes">Autoencoders compress and reconstruct; high reconstruction error means "unlike training data", which makes them useful for anomaly detection. GANs pit two networks against each other; they're sharp but unstable to train. Diffusion learns to undo noise step by step; it's slower to sample but stable and high-quality. Disclose generated imagery; virtual staging must be labeled to avoid misleading buyers.</aside>
+</section>
+
+<section class="slide" data-section="dl" data-label="Deep Learning" data-min="1.5">
+  <h2>LLMs: how they're <span class="k">trained</span></h2>
+  <div class="cols">
+    <div class="col">
+      <div class="pill">Predict the next token at internet scale, then align</div>
+      <div class="eq">\[L=-\sum_t \log P_\theta(x_t\mid x_{&lt;t})\]</div>
+      <div class="eq">\[\max_\pi\;\mathbb E[r(x,y)]-\beta\,\mathrm{KL}(\pi\,\Vert\,\pi_{\text{ref}})\]</div>
+      <p class="where">x_t: next token · r: learned reward model of human preferences · KL term keeps the model close to its SFT version</p>
+      <div class="hs"><svg class="ico"><use href="#house"/></svg><div><b>HomeScope:</b> fine-tune on real-estate Q&amp;A so the model knows HOA, escrow and comps</div></div>
+    </div>
+    <div class="col viz">
+<pre class="mermaid mm">
+flowchart TD
+  A["Pretraining<br/>next-token prediction<br/>on a huge text corpus"] --> B["Supervised fine-tuning<br/>instruction and answer pairs"]
+  B --> C["Preference tuning<br/>RLHF: reward model + RL"]
+  C --> D["Assistant model"]
+</pre>
+    </div>
+  </div>
+  <div class="foot"><div><b>vs. BERT-style:</b> decoder-only, generates left to right; one model handles many tasks via prompts.</div><div><b>At scale:</b> GPT-3 showed few-shot prompting (Brown et al., 2020); InstructGPT introduced RLHF for assistants (Ouyang et al., 2022).</div></div>
+  <aside class="notes">Pretraining is self-supervised, so the labels are just the next token, which is why it scales to trillions of tokens. Supervised fine-tuning teaches the assistant format. Preference tuning teaches which answers humans prefer; DPO (Rafailov et al., 2023) is a popular simpler alternative to the RL step. For HomeScope we'd rarely pretrain. We'd prompt, retrieve, and maybe lightly fine-tune.</aside>
+</section>
+
+<section class="slide" data-section="dl" data-label="Deep Learning" data-min="1.5">
+  <h2>HomeScope <span class="k">assistant</span>: LLM + RAG + tools</h2>
+  <div style="display:flex;gap:18px;align-items:center">
+    <div class="pill" style="align-self:center">LLM as the brain, tools as the hands</div>
+    <div class="where"><b class="ac">vs. classic search:</b> filters need exact fields; the assistant turns intent into filters and explains results.</div>
+  </div>
+  <div class="cols" style="grid-template-columns:.62fr 1.38fr">
+    <ul class="b">
+      <li><span class="ac">RAG:</span> ground answers in current listings (Lewis et al., 2020)</li>
+      <li><span class="ac">Tools:</span> call our search API and GBM price model</li>
+      <li><span class="hl">Guardrails:</span> never invent prices; follow fair-housing rules (no steering)</li>
+    </ul>
+    <div class="col viz">
+<pre class="mermaid mm">
+sequenceDiagram
+  participant U as Buyer
+  participant A as LLM
+  participant S as Search
+  participant P as Price
+  U->>A: 3 bed, good schools, under 600k
+  A->>S: beds 3, max 600k
+  S-->>A: 12 listings
+  A->>P: value top 5
+  P-->>A: estimates
+  A-->>U: 5 homes, 2 below estimate
+</pre>
+    </div>
+  </div>
+  <aside class="notes">This slide pulls the whole deck together: the LLM handles language, while classical models provide facts like price estimates. Retrieval keeps answers current and citable instead of relying on the model's memory. Fair-housing compliance is a real legal requirement in the US. Avoid recommendations based on protected characteristics, and evaluate the assistant for it.</aside>
+</section>
+
+<!-- ============ 9. PUTTING IT TOGETHER ============ -->
+<section class="slide" data-section="core" data-label="Putting It Together" data-min="1.5">
+  <h2>Choosing an <span class="k">algorithm</span></h2>
+  <p class="from">We've met a dozen tools. How do you pick one?</p>
+<pre class="mermaid mm">
+flowchart LR
+  S{"Labels?"} -->|no| U{"Goal?"}
+  U -->|groups| K["K-Means or DBSCAN"]
+  U -->|compress| P["PCA"]
+  U -->|outliers| I["Isolation Forest"]
+  S -->|yes| D{"Data type?"}
+  D -->|tabular| T{"Must explain?"}
+  T -->|yes| L["Linear, logistic, or one tree"]
+  T -->|no| G["Gradient boosting"]
+  D -->|images| C["Pretrained CNN, fine-tune"]
+  D -->|text, sequences| X["Transformer or LLM"]
+  D -->|user-item clicks| M["MF or two-tower"]
+</pre>
+  <aside class="notes">This is a starting point, not a law. Always start with the simplest baseline and only add complexity when validation metrics justify it. Note how often "pretrained" appears on the deep-learning side; in industry you rarely train big models from scratch.</aside>
+</section>
+
+<section class="slide" data-section="core" data-label="Putting It Together" data-min="1.5">
+  <h2>HomeScope <span class="k">end-to-end</span></h2>
+<pre class="mermaid mm">
+flowchart LR
+  LD[("Listings DB")] --> FS["Feature store"]
+  EV[("Clickstream")] --> FS
+  PH[("Photos")] --> CN["CNN photo tagger"]
+  CN --> FS
+  LD --> VI["Vector index"]
+  CN --> VI
+  FS --> GB["GBM price"]
+  FS --> FR["Fraud: classifier<br/>+ anomaly"]
+  VI --> RC["Two-tower<br/>recommender"]
+  VI --> LM["LLM assistant<br/>+ RAG"]
+  GB --> API["HomeScope API"]
+  FR --> API
+  RC --> API
+  LM --> API
+  LM -.->|tool call| GB
+  API --> UI["Web and app"]
+  UI -.->|new events| EV
+</pre>
+  <aside class="notes">Every model from today has a home here. Note the shared feature store, which keeps training and serving features consistent, and the vector index serving both recommendations and RAG. The dotted feedback loop from the UI back to the clickstream is where new training labels come from, and it's also where feedback bias can creep in.</aside>
+</section>
+
+<section class="slide" data-section="core" data-label="Putting It Together" data-min="1.5">
+  <h2>MLOps <span class="k">essentials</span></h2>
+  <div class="cols">
+    <div class="col">
+      <ul class="b">
+        <li><span class="ac">Data drift:</span> inputs shift (buyers move to suburbs)</li>
+        <li><span class="ac">Concept drift:</span> the relationship changes (same house, new price)</li>
+        <li>Monitor inputs, outputs, latency and delayed ground truth</li>
+      </ul>
+      <div class="eq">\[\text{PSI}=\textstyle\sum_i (a_i-e_i)\ln\frac{a_i}{e_i}\]</div>
+      <p class="where">e_i, a_i: expected (training) vs. actual share of data in bin i</p>
+      <div class="hs"><svg class="ico"><use href="#house"/></svg><div><b>HomeScope:</b> the 2022 mortgage-rate jump changed what sells fast, so an old model silently degraded</div></div>
+    </div>
+    <div class="col viz">
+<pre class="mermaid mm">
+flowchart TD
+  D["Deploy model v3"] --> M["Monitor<br/>inputs, outputs, errors"]
+  M --> Q{"Drift or<br/>metric drop?"}
+  Q -->|no| M
+  Q -->|yes| R["Retrain on fresh data"]
+  R --> V["Validate vs champion<br/>offline + A/B test"]
+  V --> D
+</pre>
+    </div>
+  </div>
+  <div class="foot" style="grid-template-columns:1fr"><div><b>At scale:</b> "Hidden Technical Debt in Machine Learning Systems" (Sculley et al., Google, 2015): the model is a small part of the system.</div></div>
+  <aside class="notes">A model is a snapshot of the past; the world keeps moving. Track feature distributions (PSI, KS tests) and prediction distributions right away, because true sale prices arrive weeks later. Automate retraining, but gate every promotion on validation against the current champion. Version data, code and models together so you can roll back.</aside>
+</section>
+
+<!-- ============ 10. CLOSE ============ -->
+<section class="slide" data-section="core" data-label="Close" data-min="1.5">
+  <h2>Key <span class="k">takeaways</span></h2>
+  <div class="cols">
+    <div class="col" style="gap:20px">
+      <div class="card"><span class="hl">Start with a line.</span> A baseline tells you what "good" means.</div>
+      <div class="card"><span class="hl">Tabular? Boost first.</span> Gradient boosting before deep nets.</div>
+      <div class="card"><span class="hl">No labels? Still value.</span> Cluster, compress, flag anomalies.</div>
+    </div>
+    <div class="col" style="gap:20px">
+      <div class="card"><span class="hl">Pixels and prose? Learn features.</span> That's deep learning's job.</div>
+      <div class="card"><span class="hl">Look at what matters.</span> Attention + scale = Transformers = LLMs.</div>
+      <div class="card"><span class="hl">Ship, then watch.</span> Monitor, catch drift, retrain.</div>
+    </div>
+  </div>
+  <div class="hs"><svg class="ico"><use href="#house"/></svg><div><b>HomeScope</b> uses nearly every algorithm today, each where it fits best.</div></div>
+  <aside class="notes">Leave people with these six one-liners. The meta-lesson: algorithms are tools with trade-offs, and the bias–variance and data-type questions tell you which to reach for. Point people to the curriculum notebooks for hands-on practice.</aside>
+</section>
+
+<section class="slide" data-section="core" data-label="Close" data-min="1.5">
+  <h2>Q&amp;A <span class="k">+ references</span></h2>
+  <div class="cols" style="font-size:20px;line-height:1.35">
+    <ul class="b">
+      <li>Hastie, Tibshirani &amp; Friedman, <i>The Elements of Statistical Learning</i> (2009)</li>
+      <li>Goodfellow, Bengio &amp; Courville, <i>Deep Learning</i> (2016)</li>
+      <li>scikit-learn docs · Google ML Crash Course · Stanford CS231n</li>
+      <li>J. Alammar, "The Illustrated Transformer" (2018)</li>
+      <li>Breiman, Random Forests (2001) · Chen &amp; Guestrin, XGBoost (2016) · Ke et al., LightGBM (2017)</li>
+      <li>Koren, Bell &amp; Volinsky (2009) · Covington et al., YouTube DNN (2016)</li>
+      <li>Ester et al., DBSCAN (1996) · Liu et al., Isolation Forest (2008)</li>
+    </ul>
+    <ul class="b">
+      <li>Rumelhart, Hinton &amp; Williams (1986) · Kingma &amp; Ba, Adam (2015)</li>
+      <li>Krizhevsky et al., AlexNet (2012) · He et al., ResNet (2015)</li>
+      <li>Hochreiter &amp; Schmidhuber, LSTM (1997) · Bahdanau et al. (2014)</li>
+      <li>Vaswani et al., "Attention Is All You Need" (2017) · Devlin et al., BERT (2018)</li>
+      <li>Goodfellow et al., GANs (2014) · Ho et al., DDPM (2020)</li>
+      <li>Brown et al., GPT-3 (2020) · Ouyang et al., InstructGPT (2022) · Lewis et al., RAG (2020)</li>
+      <li>Sculley et al., ML Technical Debt (2015) · Course: <i>AI/ML Engineer Fundamentals</i> curriculum guide</li>
+    </ul>
+  </div>
+  <aside class="notes">Open the floor. The visuals in this deck are original drawings with synthetic data; the captions credit the sources that inspired them. Good follow-ups: the curriculum's Day 2 and Day 3 notebooks, and the Illustrated Transformer for intuition about attention.</aside>
+</section>
+
+<div id="hint"><kbd>←</kbd> <kbd>→</kbd> navigate · <kbd>N</kbd> notes</div>
+<div id="count"></div>
+<div id="progwrap"><div id="prog"></div></div>
+</div><!-- /deck -->
+<div id="notes"><div class="meta"></div><div class="body"></div></div>
+
+<script>
+/* ---------- tiny SVG chart kit (illustrative data, generated in code) ---------- */
+const C={text:'#F1F5F9',muted:'#CBD5E1',dim:'#94A3B8',grid:'#334155',ind:'#A5B4FC',indS:'#6366F1',cy:'#22D3EE',am:'#F59E0B',panel:'#1E293B'};
+function rng(seed){let s=seed>>>0;return()=>{s=(Math.imul(s,1664525)+1013904223)>>>0;return s/4294967296}}
+function gauss(r){let u=0;while(!u)u=r();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*r())}
+let clipN=0;
+class P{
+  constructor(w,h,xr,yr,m){this.w=w;this.h=h;this.xr=xr;this.yr=yr;this.m=Object.assign({l:70,r:24,t:24,b:58},m||{});this.s=[];}
+  X(x){const{l,r}=this.m;return l+(x-this.xr[0])/(this.xr[1]-this.xr[0])*(this.w-l-r)}
+  Y(y){const{t,b}=this.m;return this.h-b-(y-this.yr[0])/(this.yr[1]-this.yr[0])*(this.h-t-b)}
+  add(s){this.s.push(s);return this}
+  clip(){const id='cp'+(++clipN),{l,r,t,b}=this.m;this.add(`<clipPath id="${id}"><rect x="${l}" y="${t}" width="${this.w-l-r}" height="${this.h-t-b}"/></clipPath>`);return id}
+  axes(xl,yl){const{l,r,t,b}=this.m,w=this.w,h=this.h;
+    this.add(`<line x1="${l}" y1="${h-b}" x2="${w-r}" y2="${h-b}" stroke="${C.dim}" stroke-width="2"/><line x1="${l}" y1="${t}" x2="${l}" y2="${h-b}" stroke="${C.dim}" stroke-width="2"/>`);
+    if(xl)this.add(`<text x="${(l+w-r)/2}" y="${h-14}" fill="${C.muted}" font-size="22" text-anchor="middle">${xl}</text>`);
+    if(yl)this.add(`<text transform="translate(26,${(t+h-b)/2}) rotate(-90)" fill="${C.muted}" font-size="22" text-anchor="middle">${yl}</text>`);return this}
+  pts(a,c,r=6,ex=''){a.forEach(([x,y])=>this.add(`<circle cx="${this.X(x).toFixed(1)}" cy="${this.Y(y).toFixed(1)}" r="${r}" fill="${c}" ${ex}/>`));return this}
+  path(a,c,w=3,ex=''){return this.add(`<path d="${a.map(([x,y],i)=>(i?'L':'M')+this.X(x).toFixed(1)+','+this.Y(y).toFixed(1)).join('')}" fill="none" stroke="${c}" stroke-width="${w}" stroke-linejoin="round" ${ex}/>`)}
+  fn(f,c,w=3,ex='',n=160,x0=this.xr[0],x1=this.xr[1]){const a=[];for(let i=0;i<=n;i++){const x=x0+(x1-x0)*i/n;a.push([x,f(x)])}return this.path(a,c,w,ex)}
+  line(x1,y1,x2,y2,c,w=2,ex=''){return this.add(`<line x1="${this.X(x1).toFixed(1)}" y1="${this.Y(y1).toFixed(1)}" x2="${this.X(x2).toFixed(1)}" y2="${this.Y(y2).toFixed(1)}" stroke="${c}" stroke-width="${w}" ${ex}/>`)}
+  text(x,y,s,c=C.text,ex=''){return this.add(`<text x="${this.X(x).toFixed(1)}" y="${this.Y(y).toFixed(1)}" fill="${c}" font-size="22" ${ex}>${s}</text>`)}
+  svg(){return `<svg viewBox="0 0 ${this.w} ${this.h}" role="img" preserveAspectRatio="xMidYMid meet">${this.s.join('')}</svg>`}
+}
+const svgWrap=(w,h,body)=>`<svg viewBox="0 0 ${w} ${h}" role="img" preserveAspectRatio="xMidYMid meet">${body}</svg>`;
+const T=(x,y,s,c=C.text,sz=22,ex='')=>`<text x="${x}" y="${y}" fill="${c}" font-size="${sz}" ${ex}>${s}</text>`;
+const arrowDef=(id,c)=>`<defs><marker id="${id}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="${c}"/></marker></defs>`;
+function solve(A,b){const n=b.length,M=A.map((r,i)=>[...r,b[i]]);
+  for(let c=0;c<n;c++){let p=c;for(let r=c+1;r<n;r++)if(Math.abs(M[r][c])>Math.abs(M[p][c]))p=r;[M[c],M[p]]=[M[p],M[c]];
+    for(let r=0;r<n;r++){if(r===c)continue;const f=M[r][c]/M[c][c];for(let k=c;k<=n;k++)M[r][k]-=f*M[c][k]}}
+  return M.map((r,i)=>r[n]/r[i])}
+function polyfit(xs,ys,deg,lam){const X=xs.map(x=>Array.from({length:deg+1},(_,k)=>x**k)),d=deg+1;
+  const A=Array.from({length:d},(_,i)=>Array.from({length:d},(_,j)=>X.reduce((s,r)=>s+r[i]*r[j],0)+(i===j&&i>0?lam:0)));
+  const b=Array.from({length:d},(_,i)=>X.reduce((s,r,n)=>s+r[i]*ys[n],0));const w=solve(A,b);return x=>w.reduce((s,wk,k)=>s+wk*x**k,0)}
+const sig=z=>1/(1+Math.exp(-z));
+
+const CHARTS={
+hero(){const s=[];const r=rng(7);
+  s.push(`<path d="M80 250 L300 70 L520 250" fill="none" stroke="${C.am}" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>`);
+  s.push(`<path d="M120 225 V470 H480 V225" fill="none" stroke="${C.am}" stroke-width="10" stroke-linejoin="round"/>`);
+  // rising line chart inside the house
+  const pts=[];for(let i=0;i<9;i++)pts.push([150+i*38,440-i*22-(r()*30)]);
+  s.push(`<path d="${pts.map((p,i)=>(i?'L':'M')+p[0]+','+p[1]).join('')}" fill="none" stroke="${C.cy}" stroke-width="5"/>`);
+  pts.forEach(p=>s.push(`<circle cx="${p[0]}" cy="${p[1]}" r="7" fill="${C.cy}"/>`));
+  // network nodes around
+  const nodes=[[560,120],[580,260],[560,400],[650,190],[650,330]];
+  nodes.forEach(n=>pts.slice(-3).forEach(p=>s.push(`<line x1="${p[0]}" y1="${p[1]}" x2="${n[0]}" y2="${n[1]}" stroke="${C.indS}" stroke-width="1.5" opacity=".55"/>`)));
+  [[560,120],[580,260],[560,400]].forEach(a=>[[650,190],[650,330]].forEach(b=>s.push(`<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="${C.indS}" stroke-width="2" opacity=".8"/>`)));
+  nodes.forEach(n=>s.push(`<circle cx="${n[0]}" cy="${n[1]}" r="16" fill="${C.panel}" stroke="${C.ind}" stroke-width="4"/>`));
+  return svgWrap(700,520,s.join(''))},
+
+nested(){const box=(x,y,w,h,c,lab,ex)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="26" fill="${c}" fill-opacity=".14" stroke="${c}" stroke-width="3"/>`+T(x+24,y+40,lab,C.text,26,'font-weight="700"')+T(x+24,y+70,ex,C.muted,20);
+  return svgWrap(700,520,box(10,10,680,500,'#94A3B8','Artificial Intelligence','rules, search, planning, learning')+box(60,100,580,400,C.indS,'Machine Learning','regression, trees, clustering')+box(110,190,480,300,C.am,'Deep Learning','CNNs, RNNs, Transformers')+box(160,280,380,200,C.cy,'Generative AI','LLMs, diffusion models'))},
+
+biasvar(){const p=new P(700,500,[0,10],[0,7.6]);const b=x=>6*Math.exp(-.45*x)+.3,v=x=>.08*Math.exp(.38*x),n=.6,t=x=>b(x)+v(x)+n;
+  let bx=0,bv=1e9;for(let x=0;x<=10;x+=.01)if(t(x)<bv){bv=t(x);bx=x}
+  p.axes('Model complexity →','Error');p.line(bx,0,bx,7.4,C.dim,2,'stroke-dasharray="6 6"');
+  p.fn(()=>n,C.dim,2,'stroke-dasharray="4 6"').fn(b,C.ind,4).fn(v,C.am,4).fn(t,C.cy,6);
+  p.text(.3,6.95,'Bias²',C.ind,'font-weight="700"').text(8.0,3.1,'Variance',C.am,'font-weight="700"').text(5.6,5.0,'Total test error',C.cy,'font-weight="700"').text(7.6,.25,'noise σ²',C.dim);
+  p.text(.4,1.45,'Underfit',C.muted).text(bx+.15,7.15,'Sweet spot',C.text,'font-weight="700"').text(8.2,6.3,'Overfit',C.muted);return p.svg()},
+
+linreg(){const r=rng(11),D=[];for(let i=0;i<42;i++){const x=.9+r()*2.6;D.push([x,80+165*x+gauss(r)*38])}
+  const n=D.length,mx=D.reduce((s,d)=>s+d[0],0)/n,my=D.reduce((s,d)=>s+d[1],0)/n;
+  const w=D.reduce((s,d)=>s+(d[0]-mx)*(d[1]-my),0)/D.reduce((s,d)=>s+(d[0]-mx)**2,0),b=my-w*mx;
+  const p=new P(700,500,[.7,3.7],[150,750],{l:84});p.axes('Size (1,000 sqft)','Sale price ($k)');
+  [200,400,600].forEach(v=>p.text(.7,v,v,C.dim,'text-anchor="end" dx="-8" dy="7" font-size="20"'));
+  D.slice(0,8).forEach(([x,y])=>p.line(x,y,x,w*x+b,C.am,2,'stroke-dasharray="4 4"'));
+  p.pts(D,C.ind,6,'fill-opacity=".85"').fn(x=>w*x+b,C.cy,5);
+  p.text(.85,705,`ŷ ≈ ${b.toFixed(0)} + ${w.toFixed(0)}·size`,C.cy,'font-weight="700"').text(2.35,215,'residuals (dashed)',C.am,'font-size="20"');return p.svg()},
+
+gd(){const L=w=>(w-2)**2+.5,p=new P(700,500,[-1,5],[0,10]);p.axes('Weight w','Loss L(w)');p.fn(L,C.ind,4);
+  const run=(w0,eta,n)=>{const a=[[w0,L(w0)]];let w=w0;for(let i=0;i<n;i++){w=w-eta*2*(w-2);a.push([w,L(w)])}return a};
+  const good=run(-.8,.3,6),bad=run(4.6,.95,7);
+  p.path(bad,C.am,2.5,'stroke-dasharray="7 5"').pts(bad,C.am,7).path(good,C.cy,3).pts(good,C.cy,8);
+  p.text(-.9,9.3,'η = 0.3 converges',C.cy,'font-weight="700"').text(2.3,9.3,'η = 0.95 oscillates',C.am,'font-weight="700"').text(1.5,.95,'minimum',C.muted);return p.svg()},
+
+poly(){const r=rng(5),xs=[],ys=[];for(let i=0;i<12;i++){const x=.2+i*.42+(r()-.5)*.18;xs.push(x);ys.push(Math.sin(1.2*x)+.3*x+gauss(r)*.25)}
+  const sc=x=>(x-2.5)/2.5,f1=polyfit(xs.map(sc),ys,1,0),f9=polyfit(xs.map(sc),ys,9,1e-9),fr=polyfit(xs.map(sc),ys,9,.02);
+  const p=new P(700,500,[0,5],[-1.6,3.2]);const id=p.clip();p.axes('Distance to downtown','Price (scaled)');
+  p.fn(x=>f1(sc(x)),C.dim,3,`stroke-dasharray="8 6" clip-path="url(#${id})"`).fn(x=>f9(sc(x)),C.am,3.5,`clip-path="url(#${id})"`,400).fn(x=>fr(sc(x)),C.cy,5,`clip-path="url(#${id})"`,300);
+  p.pts(xs.map((x,i)=>[x,ys[i]]),C.text,6);
+  p.text(.15,3.0,'degree 1: underfit',C.dim,'font-size="20"').text(.15,2.65,'degree 9: overfit',C.am,'font-size="20" font-weight="700"').text(.15,2.3,'degree 9 + Ridge',C.cy,'font-size="20" font-weight="700"');return p.svg()},
+
+resid(){const e=[['Home A',-20],['Home B',20],['Home C',50],['Home D',-10]],p=new P(700,330,[0,4],[-30,60],{l:80,b:50});
+  p.line(0,0,4,0,C.dim,2);e.forEach(([n,v],i)=>{const x0=p.X(i+.25),x1=p.X(i+.75),y0=p.Y(0),y1=p.Y(v);
+    p.add(`<rect x="${x0}" y="${Math.min(y0,y1)}" width="${x1-x0}" height="${Math.abs(y1-y0)}" rx="5" fill="${v===50?C.am:C.indS}"/>`);
+    p.text(i+.5,v>0?v+4:v-10,(v>0?'+':'')+v,C.text,'text-anchor="middle" font-weight="700"').text(i+.5,-28,n,C.muted,'text-anchor="middle" font-size="20"')});
+  p.add(`<text transform="translate(28,150) rotate(-90)" fill="${C.muted}" font-size="22" text-anchor="middle">error y − ŷ ($k)</text>`);return p.svg()},
+
+sigmoid(){const r=rng(3),p=new P(700,430,[-6,6],[-.12,1.12]);p.axes('z = wᵀx + b','P(sells ≤ 30 days)');
+  p.line(-6,.5,6,.5,C.dim,2,'stroke-dasharray="6 6"').line(0,-.1,0,1.1,C.dim,2,'stroke-dasharray="6 6"');
+  const D=[];for(let i=0;i<46;i++){const z=-5.6+r()*11.2;D.push([z,r()<sig(1.3*z)?1:0])}
+  p.pts(D.filter(d=>d[1]).map(d=>[d[0],1+(r()-.5)*.07]),C.am,7,'fill-opacity=".9"').pts(D.filter(d=>!d[1]).map(d=>[d[0],(r()-.5)*.07]),C.ind,7,'fill-opacity=".9"');
+  p.fn(sig,C.cy,5);p.text(-5.8,.58,'threshold 0.5',C.muted,'font-size="20"').text(2.3,.84,'sold fast',C.am,'font-weight="700"').text(-5.8,.12,'sold slowly',C.ind,'font-weight="700"');return p.svg()},
+
+knn(){const r=rng(21),A=[],B=[];for(let i=0;i<24;i++){A.push([3+gauss(r)*1.3,6.2+gauss(r)*1.3]);B.push([6.6+gauss(r)*1.3,3.6+gauss(r)*1.3])}
+  const q=[4.7,5.0],all=A.map(a=>[...a,'A']).concat(B.map(b=>[...b,'B'])).map(d=>[...d,Math.hypot(d[0]-q[0],d[1]-q[1])]).sort((a,b)=>a[3]-b[3]),nn=all.slice(0,5);
+  const nA=nn.filter(d=>d[2]==='A').length,p=new P(700,500,[0,10],[0,10]);p.axes('Price vs. area median','Listing quality score');
+  p.add(`<circle cx="${p.X(q[0])}" cy="${p.Y(q[1])}" r="${(p.X(q[0]+nn[4][3])-p.X(q[0])).toFixed(1)}" fill="${C.cy}" fill-opacity=".08" stroke="${C.cy}" stroke-width="2" stroke-dasharray="6 5"/>`);
+  nn.forEach(d=>p.line(q[0],q[1],d[0],d[1],C.cy,2));p.pts(A,C.am,7).pts(B,C.ind,7);
+  p.add(`<path d="M${p.X(q[0])},${p.Y(q[1])-16} l5,11 12,1 -9,8 3,12 -11,-6 -11,6 3,-12 -9,-8 12,-1z" fill="${C.text}"/>`);
+  p.text(.3,9.4,'● sold fast',C.am,'font-weight="700"').text(.3,8.7,'● sold slowly',C.ind,'font-weight="700"').text(5.6,9.4,`k = 5 → ${nA} fast · ${5-nA} slow`,C.cy,'font-weight="700"');return p.svg()},
+
+svm(){const r=rng(9),A=[],B=[];while(A.length<13){const x=r()*10,y=r()*10;if(y<x-2.3)A.push([x,y])}while(B.length<13){const x=r()*10,y=r()*10;if(y>x+2.3)B.push([x,y])}
+  const SA=[[5,3.5],[7.6,6.1]],SB=[[3,4.5],[6.2,7.7]],p=new P(700,500,[0,10],[0,10]);const id=p.clip();p.axes('Feature 1','Feature 2');
+  p.add(`<polygon points="${[[0,1.5],[0,-1.5],[10,8.5],[10,11.5]].map(([x,y])=>p.X(x)+','+p.Y(y)).join(' ')}" fill="${C.am}" fill-opacity=".08" clip-path="url(#${id})"/>`);
+  p.line(0,-1.5,10,8.5,C.muted,2,`stroke-dasharray="7 6" clip-path="url(#${id})"`).line(0,1.5,10,11.5,C.muted,2,`stroke-dasharray="7 6" clip-path="url(#${id})"`).line(0,0,10,10,C.am,4,`clip-path="url(#${id})"`);
+  p.pts(A.concat(SA),C.ind,7).pts(B.concat(SB),C.cy,7);SA.concat(SB).forEach(([x,y])=>p.add(`<circle cx="${p.X(x)}" cy="${p.Y(y)}" r="14" fill="none" stroke="${C.text}" stroke-width="2.5"/>`));
+  p.text(.4,9.3,'○ support vectors',C.text,'font-weight="700"').text(6.4,1.2,'legit',C.ind,'font-weight="700"').text(.6,6.6,'fraud',C.cy,'font-weight="700"').text(7.9,9.0,'margin 2/‖w‖',C.am,'font-weight="700" font-size="20"');return p.svg()},
+
+roc(){const p=new P(560,500,[0,1],[0,1]);p.axes('False positive rate','True positive rate');const f=x=>1-(1-x)**5;
+  const a=[[0,0]];for(let i=0;i<=100;i++){const x=i/100;a.push([x,f(x)])}a.push([1,0]);
+  p.add(`<path d="${a.map(([x,y],i)=>(i?'L':'M')+p.X(x)+','+p.Y(y)).join('')}z" fill="${C.indS}" fill-opacity=".22"/>`);
+  p.line(0,0,1,1,C.dim,2,'stroke-dasharray="7 6"').fn(f,C.cy,5,'',100,0,1);
+  p.text(.36,.48,'AUC ≈ 0.83',C.cy,'font-weight="700" font-size="26"').text(.55,.3,'random: 0.5',C.dim);return p.svg()},
+
+kmeans(){const r=rng(17),cs=[[2.2,7],[6.2,2.8],[8,7.8]],X=[];cs.forEach(c=>{for(let i=0;i<26;i++)X.push([c[0]+gauss(r)*.95,c[1]+gauss(r)*.95])});
+  let mu=[[1,1],[2,1.6],[3.2,.8]];const hist=mu.map(m=>[m.slice()]);let lab=[];
+  for(let it=0;it<12;it++){lab=X.map(x=>{let bi=0,bd=1e9;mu.forEach((m,k)=>{const d=(x[0]-m[0])**2+(x[1]-m[1])**2;if(d<bd){bd=d;bi=k}});return bi});
+    mu=mu.map((m,k)=>{const pts=X.filter((_,i)=>lab[i]===k);return pts.length?[pts.reduce((s,p)=>s+p[0],0)/pts.length,pts.reduce((s,p)=>s+p[1],0)/pts.length]:m});mu.forEach((m,k)=>hist[k].push(m.slice()))}
+  const col=[C.ind,C.cy,C.am],p=new P(700,500,[0,10],[0,10]);p.axes('Median price →','Walkability →');
+  X.forEach((x,i)=>p.pts([x],col[lab[i]],6,'fill-opacity=".85"'));hist.forEach((h,k)=>p.path(h,C.text,2,'stroke-dasharray="5 5" opacity=".8"'));
+  mu.forEach(([x,y])=>{const X0=p.X(x),Y0=p.Y(y);p.add(`<path d="M${X0-12},${Y0-12}L${X0+12},${Y0+12}M${X0+12},${Y0-12}L${X0-12},${Y0+12}" stroke="${C.text}" stroke-width="5" stroke-linecap="round"/>`)});
+  const names=['starter suburb','urban core','premium'];mu.forEach(([x,y],k)=>p.text(Math.min(x+.35,7.4),y+.9,names[k],col[k],'font-weight="700"'));return p.svg()},
+
+dbscan(){const r=rng(4),X=[];for(let i=0;i<70;i++){const t=Math.PI*r();X.push([Math.cos(t)+gauss(r)*.06,Math.sin(t)+gauss(r)*.06])}
+  for(let i=0;i<70;i++){const t=Math.PI*r();X.push([1-Math.cos(t)+gauss(r)*.06,.5-Math.sin(t)+gauss(r)*.06])}
+  for(let i=0;i<10;i++)X.push([-1.3+r()*3.6,-.85+r()*2.2]);
+  const eps=.2,minP=5,lab=Array(X.length).fill(undefined),nb=i=>X.map((x,j)=>j).filter(j=>Math.hypot(X[i][0]-X[j][0],X[i][1]-X[j][1])<=eps);let c=0;
+  for(let i=0;i<X.length;i++){if(lab[i]!==undefined)continue;const N=nb(i);if(N.length<minP){lab[i]=-1;continue}lab[i]=c;const seeds=[...N];
+    while(seeds.length){const j=seeds.pop();if(lab[j]===-1)lab[j]=c;if(lab[j]!==undefined)continue;lab[j]=c;const Nj=nb(j);if(Nj.length>=minP)seeds.push(...Nj)}c++}
+  const col=[C.cy,C.am,C.ind,'#F472B6'],p=new P(700,300,[-1.4,2.4],[-.95,1.3],{l:20,b:20,t:10,r:10});
+  X.forEach((x,i)=>{if(lab[i]<0){const X0=p.X(x[0]),Y0=p.Y(x[1]);p.add(`<path d="M${X0-7},${Y0-7}L${X0+7},${Y0+7}M${X0+7},${Y0-7}L${X0-7},${Y0+7}" stroke="${C.dim}" stroke-width="3"/>`)}else p.pts([x],col[lab[i]%4],5.5)});
+  p.text(-1.35,1.12,`DBSCAN: ${c} clusters + noise ×`,C.text,'font-weight="700"');return p.svg()},
+
+dendro(){const W=700,H=250,base=200,leaves=['Core A','Core B','Core C','Sub N','Sub S','Rural'],xs=leaves.map((_,i)=>70+i*112),hy=h=>base-h*34,s=[];
+  const U=(x1,h1,x2,h2,h)=>`<path d="M${x1},${hy(h1)}V${hy(h)}H${x2}V${hy(h2)}" fill="none" stroke="${C.cy}" stroke-width="3"/>`;
+  const ab=(xs[0]+xs[1])/2,abc=(ab+xs[2])/2,ns=(xs[3]+xs[4])/2,nsr=(ns+xs[5])/2;
+  s.push(U(xs[0],0,xs[1],0,1),U(ab,1,xs[2],0,2),U(xs[3],0,xs[4],0,1.4),U(ns,1.4,xs[5],0,3),U(abc,2,nsr,3,5));
+  s.push(`<line x1="20" y1="${hy(2.5)}" x2="${W-20}" y2="${hy(2.5)}" stroke="${C.am}" stroke-width="2" stroke-dasharray="7 6"/>`,T(W-20,hy(2.5)-8,'cut → 3 clusters',C.am,20,'text-anchor="end" font-weight="700"'));
+  leaves.forEach((l,i)=>s.push(T(xs[i],base+30,l,C.muted,20,'text-anchor="middle"')));return svgWrap(W,H,s.join(''))},
+
+pca(){const r=rng(12),X=[];for(let i=0;i<70;i++){const s=gauss(r);X.push([s,.85*s+gauss(r)*.38])}
+  const n=X.length,mx=X.reduce((a,x)=>a+x[0],0)/n,my=X.reduce((a,x)=>a+x[1],0)/n,a=X.reduce((s,x)=>s+(x[0]-mx)**2,0)/(n-1),d=X.reduce((s,x)=>s+(x[1]-my)**2,0)/(n-1),b=X.reduce((s,x)=>s+(x[0]-mx)*(x[1]-my),0)/(n-1);
+  const tr=(a+d)/2,dt=Math.sqrt(((a-d)/2)**2+b*b),l1=tr+dt,l2=tr-dt,v1=[b,l1-a],nv=Math.hypot(...v1),u=[v1[0]/nv,v1[1]/nv],u2=[-u[1],u[0]];
+  const p=new P(700,500,[-3.2,3.2],[-3,3]);const id=p.clip();p.axes('Square footage (std.)','Rooms (std.)');p.add(arrowDef('ah',C.am)+arrowDef('ah2',C.cy));
+  p.line(mx-u[0]*4,my-u[1]*4,mx+u[0]*4,my+u[1]*4,C.dim,1.5,`stroke-dasharray="4 6" clip-path="url(#${id})"`);
+  X.slice(0,10).forEach(([x,y])=>{const t=(x-mx)*u[0]+(y-my)*u[1];p.line(x,y,mx+t*u[0],my+t*u[1],C.am,1.5,'opacity=".8"')});
+  p.pts(X,C.ind,6,'fill-opacity=".85"');const L1=2*Math.sqrt(l1),L2=2*Math.sqrt(l2);
+  p.line(mx,my,mx+u[0]*L1,my+u[1]*L1,C.am,5,'marker-end="url(#ah)"').line(mx,my,mx+u2[0]*L2,my+u2[1]*L2,C.cy,5,'marker-end="url(#ah2)"');
+  p.text(mx+u[0]*L1+.1,my+u[1]*L1-.1,`PC1: ${(100*l1/(l1+l2)).toFixed(0)}% variance`,C.am,'font-weight="700"').text(mx+u2[0]*L2-2.4,my+u2[1]*L2+.25,'PC2',C.cy,'font-weight="700"');return p.svg()},
+
+anomaly(){const r=rng(31),X=[];for(let i=0;i<90;i++){const s=1+r()*3;X.push([s,320-18*s+gauss(r)*38])}const O=[[3.4,90],[2.6,640],[1.3,95],[3.9,560]],all=X.concat(O);
+  const n=X.length,mx=X.reduce((a,x)=>a+x[0],0)/n,my=X.reduce((a,x)=>a+x[1],0)/n,sa=X.reduce((s,x)=>s+(x[0]-mx)**2,0)/n,sd=X.reduce((s,x)=>s+(x[1]-my)**2,0)/n,sb=X.reduce((s,x)=>s+(x[0]-mx)*(x[1]-my),0)/n,det=sa*sd-sb*sb;
+  const mah=([x,y])=>{const dx=x-mx,dy=y-my;return Math.sqrt((sd*dx*dx-2*sb*dx*dy+sa*dy*dy)/det)};
+  const p=new P(700,500,[.8,4.2],[0,720],{l:84});p.axes('Size (1,000 sqft)','Price per sqft ($)');[200,400,600].forEach(v=>p.text(.8,v,v,C.dim,'text-anchor="end" dx="-8" dy="7" font-size="20"'));
+  all.forEach(x=>{const f=mah(x)>3.5;p.pts([x],f?C.am:C.cy,f?8:6,f?'':'fill-opacity=".75"');if(f)p.add(`<circle cx="${p.X(x[0])}" cy="${p.Y(x[1])}" r="18" fill="none" stroke="${C.am}" stroke-width="2.5"/>`)});
+  p.text(3.05,40,'$90/sqft waterfront',C.am,'font-weight="700" font-size="20"').text(.95,690,'● normal  ◯ flagged for review',C.text,'font-size="20"');return p.svg()},
+
+mf(){const R=[[5,0,4,0,1],[4,5,0,0,0],[0,0,5,4,0],[1,0,0,5,4]],s=[],cs=58,x0=10,y0=70;
+  const cell=(x,y,v,c,op)=>`<rect x="${x}" y="${y}" width="${cs-4}" height="${cs-4}" rx="7" fill="${c}" fill-opacity="${op}" stroke="${C.grid}"/>`+T(x+(cs-4)/2,y+cs/2+6,v,C.text,22,'text-anchor="middle" font-weight="700"');
+  s.push(T(x0,40,'R: users × homes',C.muted,22));R.forEach((row,i)=>row.forEach((v,j)=>s.push(cell(x0+j*cs,y0+i*cs,v||'?',v?C.am:C.panel,v?(.25+v*.13):1))));
+  const x1=x0+5*cs+22;s.push(T(x1,y0+2*cs+10,'≈',C.text,44,'font-weight="700"'));
+  const x2=x1+56;s.push(T(x2,40,'U',C.cy,22,'font-weight="700"'));for(let i=0;i<4;i++)for(let k=0;k<2;k++)s.push(cell(x2+k*cs,y0+i*cs,'',C.cy,.18+.5*Math.abs(Math.sin(i*1.7+k*2.3))));
+  const x3=x2+2*cs+16;s.push(T(x3,y0+2*cs+10,'×',C.text,40,'font-weight="700"'));
+  const x4=x3+40;s.push(T(x4,40,'Vᵀ',C.ind,22,'font-weight="700"'));for(let k=0;k<2;k++)for(let j=0;j<5;j++)s.push(cell(x4+j*cs,y0+cs+k*cs,'',C.indS,.25+.55*Math.abs(Math.cos(j*1.3+k*2.1))));
+  s.push(T(x0,y0+4*cs+44,'? = unseen → predicted by p_uᵀ q_i',C.muted,22),T(x2,y0+4*cs+44,'k = 2 latent "taste" dims',C.muted,22));
+  return svgWrap(x4+5*cs+10,y0+4*cs+70,s.join(''))},
+
+ts(){const r=rng(8),H=[];for(let t=0;t<36;t++)H.push([t,1200+8*t+220*Math.sin(2*Math.PI*(t-2)/12)+gauss(r)*45]);const f=t=>1200+8*t+220*Math.sin(2*Math.PI*(t-2)/12);
+  const p=new P(700,460,[0,42],[700,1900],{l:84});p.axes('Month','Active listings');[1000,1400,1800].forEach(v=>p.text(0,v,v,C.dim,'text-anchor="end" dx="-8" dy="7" font-size="20"'));
+  const band=[];for(let t=35;t<=42;t+=.25)band.push([t,f(t)+60+12*(t-35)]);for(let t=42;t>=35;t-=.25)band.push([t,f(t)-60-12*(t-35)]);
+  p.add(`<path d="${band.map(([x,y],i)=>(i?'L':'M')+p.X(x)+','+p.Y(y)).join('')}z" fill="${C.am}" fill-opacity=".18"/>`);
+  p.path(H,C.cy,3.5).pts(H,C.cy,4).fn(f,C.am,4,'stroke-dasharray="8 6"',60,35,42).line(35,720,35,1880,C.dim,2,'stroke-dasharray="4 6"');
+  [0,12,24,36].forEach((t,i)=>p.text(t,700,'Y'+(i+1),C.dim,'dy="26" text-anchor="middle" font-size="20"'));
+  p.text(29.2,1850,'today',C.muted,'font-size="20"').text(35.6,1850,'forecast',C.am,'font-weight="700" font-size="20"').text(1,1830,'spring peaks → seasonality',C.cy,'font-size="20"');return p.svg()},
+
+mlp(){const L=[4,6,6,1],W=700,H=480,s=[],xs=[110,290,470,620],pos=L.map((n,l)=>Array.from({length:n},(_,i)=>[xs[l],H/2+(i-(n-1)/2)*68]));
+  for(let l=0;l<3;l++)pos[l].forEach(a=>pos[l+1].forEach(b=>s.push(`<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="${C.am}" stroke-width="1.6" opacity=".45"/>`)));
+  pos.forEach((ly,l)=>ly.forEach(([x,y])=>s.push(`<circle cx="${x}" cy="${y}" r="20" fill="${C.panel}" stroke="${l===0?C.cy:l===3?C.am:C.ind}" stroke-width="4"/>`)));
+  ['sqft','beds','age','photo'].forEach((t,i)=>s.push(T(xs[0]-32,pos[0][i][1]+7,t,C.muted,20,'text-anchor="end"')));
+  s.push(T(xs[3],pos[3][0][1]-36,'price',C.am,22,'text-anchor="middle" font-weight="700"'));
+  [['input',0],['hidden 1',1],['hidden 2',2],['output',3]].forEach(([t,i])=>s.push(T(xs[i],H-12,t,C.dim,20,'text-anchor="middle"')));
+  s.push(T(380,40,'a = ReLU(Wx + b) in each hidden layer',C.text,22,'text-anchor="middle"'));return svgWrap(W,H,s.join(''))},
+
+act(){const p=new P(700,480,[-4,4],[-1.3,3.2]);p.axes('z','f(z)');p.line(-4,0,4,0,C.grid,1.5).line(0,-1.3,0,3.2,C.grid,1.5);
+  p.fn(z=>Math.max(0,z),C.am,5).fn(sig,C.cy,5).fn(Math.tanh,C.ind,5);
+  p.text(1.6,2.6,'ReLU',C.am,'font-weight="700"').text(2.2,1.25,'sigmoid',C.cy,'font-weight="700"').text(-3.8,-.75,'tanh',C.ind,'font-weight="700"').text(-3.8,1.5,'flat tails →',C.muted,'font-size="20"').text(-3.8,1.18,'vanishing gradients',C.muted,'font-size="20"');return p.svg()},
+
+optim(){const r=rng(2),mk=(tau,fl,nz)=>Array.from({length:51},(_,t)=>[t,2.3*Math.exp(-t/tau)+fl+(r()-.5)*2*nz]);
+  const p=new P(700,480,[0,58],[0,2.6]);p.axes('Epoch','Validation loss');
+  p.path(mk(22,.25,.06),C.ind,3.5).path(mk(12,.21,.035),C.cy,3.5).path(mk(6,.18,.02),C.am,4);
+  p.text(51,.62,'SGD',C.ind,'font-weight="700"').text(51,.36,'Momentum',C.cy,'font-weight="700" dy="6"').text(51,.12,'Adam',C.am,'font-weight="700"');return p.svg()},
+
+cnn(){const img=['00011000','00111100','01111110','11111111','01100110','01100110','01100110','01111110'].map(r=>[...r].map(Number)),K=[[-1,0,1],[-1,0,1],[-1,0,1]];
+  const out=Array.from({length:6},(_,i)=>Array.from({length:6},(_,j)=>{let s=0;for(let m=0;m<3;m++)for(let n=0;n<3;n++)s+=img[i+m][j+n]*K[m][n];return s}));
+  const pool=Array.from({length:3},(_,i)=>Array.from({length:3},(_,j)=>Math.max(0,out[2*i][2*j],out[2*i+1][2*j],out[2*i][2*j+1],out[2*i+1][2*j+1])));
+  const s=[arrowDef('ca',C.dim)],g=(x0,y0,M,cs,colf,txt)=>M.forEach((row,i)=>row.forEach((v,j)=>{s.push(`<rect x="${x0+j*cs}" y="${y0+i*cs}" width="${cs-2}" height="${cs-2}" rx="3" fill="${colf(v)}" stroke="${C.grid}"/>`);if(txt)s.push(T(x0+j*cs+cs/2-1,y0+i*cs+cs/2+7,v,C.text,20,'text-anchor="middle" font-weight="600"'))}));
+  const div=v=>v>0?`rgba(245,158,11,${Math.min(1,.25+v/3*.75)})`:v<0?`rgba(99,102,241,${Math.min(1,.25+(-v)/3*.75)})`:C.panel;
+  g(10,70,img,30,v=>v?'#CBD5E1':C.panel);s.push(`<rect x="${10+1*30}" y="${70+2*30}" width="90" height="90" fill="none" stroke="${C.am}" stroke-width="4"/>`);
+  s.push(T(10,48,'Input 8×8',C.muted,20));
+  g(300,70,K,40,v=>v>0?'rgba(245,158,11,.55)':v<0?'rgba(99,102,241,.55)':C.panel,true);s.push(T(282,48,'Kernel 3×3',C.muted,20));
+  g(300,250,out,44,div,true);s.push(T(300,240,'Feature map 6×6',C.muted,20));s.push(`<rect x="${300+1*44}" y="${250+2*44}" width="42" height="42" fill="none" stroke="${C.am}" stroke-width="4"/>`);
+  g(600,330,pool,44,v=>v>0?`rgba(245,158,11,${.25+v/3*.75})`:C.panel,true);s.push(T(580,310,'ReLU + pool',C.muted,20));
+  s.push(`<path d="M260 190 L296 270" stroke="${C.dim}" stroke-width="2.5" marker-end="url(#ca)"/><path d="M570 390 L596 390" stroke="${C.dim}" stroke-width="2.5" marker-end="url(#ca)"/>`);
+  s.push(T(10,380,'amber = edge found',C.am,20,'font-weight="700"'),T(10,410,'(dark → bright, left → right)',C.muted,20),T(10,450,'indigo = opposite edge',C.ind,20,'font-weight="700"'));
+  return svgWrap(740,530,s.join(''))},
+
+attn(){const tok=['sunny','3-bed','near','park','new','roof'],S=[[2,1,0,.3,0,0],[.8,2,0,0,0,0],[0,0,1,2,0,0],[0,0,2.2,1.2,0,0],[0,0,0,0,1,2.2],[0,.3,0,0,2.6,1]];
+  const A=S.map(r=>{const e=r.map(Math.exp),z=e.reduce((a,b)=>a+b,0);return e.map(v=>v/z)}),cs=82,x0=120,y0=80,s=[];
+  tok.forEach((t,j)=>s.push(T(x0+j*cs+cs/2,y0-16,t,C.muted,20,'text-anchor="middle"')));tok.forEach((t,i)=>s.push(T(x0-12,y0+i*cs+cs/2+7,t,C.muted,20,'text-anchor="end"')));
+  A.forEach((row,i)=>row.forEach((v,j)=>{s.push(`<rect x="${x0+j*cs}" y="${y0+i*cs}" width="${cs-3}" height="${cs-3}" rx="6" fill="${C.am}" fill-opacity="${(.06+v*.94).toFixed(2)}" stroke="${C.grid}"/>`);
+    s.push(T(x0+j*cs+cs/2,y0+i*cs+cs/2+7,v.toFixed(2),v>.45?'#0F172A':C.text,20,'text-anchor="middle" font-weight="600"'))}));
+  s.push(`<rect x="${x0+4*cs-2}" y="${y0+5*cs-2}" width="${cs+1}" height="${cs+1}" rx="7" fill="none" stroke="${C.cy}" stroke-width="4"/>`);
+  s.push(T(x0,y0+6*cs+36,'query token (row) → key token (column)',C.dim,20));return svgWrap(x0+6*cs+20,y0+6*cs+56,s.join(''))},
+
+emb(){const P_={loft:[1,3.5],condo:[1.5,2.9],studio:[.6,2.7],apartment:[1.7,3.8],cabin:[3.0,.25],'lake cottage':[4.7,1.6],'lake house':[3.8,1.8],mansion:[4.2,4.3],estate:[4.9,3.9],villa:[4.5,4.8]};
+  const q=[4.6,1.0],p=new P(700,500,[0,5.8],[0,5.6],{l:40,b:40});p.add(arrowDef('ea',C.cy)+arrowDef('eb',C.ind)+arrowDef('ec',C.am));p.axes('','');
+  const cos=(a,b)=>(a[0]*b[0]+a[1]*b[1])/Math.hypot(...a)/Math.hypot(...b);
+  p.line(0,0,P_['lake cottage'][0],P_['lake cottage'][1],C.cy,3,'marker-end="url(#ea)"').line(0,0,P_.condo[0],P_.condo[1],C.ind,3,'marker-end="url(#eb)"').line(0,0,q[0],q[1],C.am,4,'marker-end="url(#ec)"');
+  Object.entries(P_).forEach(([k,v])=>{p.pts([v],C.text,6).text(v[0]+.12,v[1]+.12,k,C.muted,'font-size="20"')});
+  p.text(.25,4.45,'→ query: "cozy retreat by the water"',C.am,'font-weight="700" font-size="20"');
+  p.text(.25,5.25,`cos(query, lake cottage) = ${cos(q,P_['lake cottage']).toFixed(2)}`,C.cy,'font-weight="700" font-size="20"').text(.25,4.85,`cos(query, condo) = ${cos(q,P_.condo).toFixed(2)}`,C.ind,'font-weight="700" font-size="20"');return p.svg()}
+};
+document.querySelectorAll('.chart[data-chart]').forEach(el=>{try{el.innerHTML=CHARTS[el.dataset.chart]()}catch(e){console.error('chart',el.dataset.chart,e)}});
+
+/* ---------- navigation ---------- */
+const deck=document.getElementById('deck'),slides=[...deck.querySelectorAll('.slide')],chip=document.getElementById('chip'),
+  prog=document.getElementById('prog'),count=document.getElementById('count'),notes=document.getElementById('notes');
+const mins=slides.map(s=>parseFloat(s.dataset.min||1)),total=mins.reduce((a,b)=>a+b,0);
+let cur=0;
+function fit(){const open=notes.classList.contains('open'),availH=innerHeight*(open?.68:1),s=Math.min(innerWidth/1600,availH/900);
+  deck.style.top=(availH/2)+'px';deck.style.transform=`translate(-50%,-50%) scale(${s})`}
+function go(n){n=Math.max(0,Math.min(slides.length-1,n));slides[cur].classList.remove('active');cur=n;const s=slides[cur];s.classList.add('active');
+  deck.dataset.section=s.dataset.section;chip.textContent=s.dataset.label||'';count.textContent=`${cur+1} / ${slides.length}`;
+  prog.style.width=((cur+1)/slides.length*100)+'%';
+  const done=mins.slice(0,cur+1).reduce((a,b)=>a+b,0);
+  notes.querySelector('.meta').textContent=`Slide ${cur+1} · ⏱ ${mins[cur]} min · running ${done} / ${total} min`;
+  notes.querySelector('.body').innerHTML=(s.querySelector('.notes')||{}).innerHTML||'';
+  if(location.hash!=='#'+(cur+1))history.replaceState(null,'','#'+(cur+1));
+  if(window.renderMermaidIn)window.renderMermaidIn(s)}
+document.addEventListener('keydown',e=>{if(e.metaKey||e.ctrlKey||e.altKey)return;const k=e.key;
+  if(['ArrowRight','ArrowDown','PageDown',' ','Enter'].includes(k)){e.preventDefault();go(cur+1)}
+  else if(['ArrowLeft','ArrowUp','PageUp','Backspace'].includes(k)){e.preventDefault();go(cur-1)}
+  else if(k==='Home')go(0);else if(k==='End')go(slides.length-1);
+  else if(k==='n'||k==='N'){notes.classList.toggle('open');fit()}});
+document.getElementById('zprev').addEventListener('click',()=>go(cur-1));
+document.getElementById('znext').addEventListener('click',()=>go(cur+1));
+addEventListener('resize',fit);
+addEventListener('hashchange',()=>{const n=parseInt(location.hash.slice(1),10);if(n&&n-1!==cur)go(n-1)});
+fit();go((parseInt(location.hash.slice(1),10)||1)-1);
+</script>
+<script type="module">
+import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs';
+const dark=['#312E81','#164E63','#78350F','#1E3A8A','#155E75','#713F12','#3730A3','#0E7490','#92400E','#1E293B','#334155','#4338CA'];
+const tv={darkMode:true,background:'#0F172A',fontFamily:'Inter, Segoe UI, system-ui, sans-serif',fontSize:'20px',
+  primaryColor:'#1E293B',primaryTextColor:'#F1F5F9',primaryBorderColor:'#6366F1',secondaryColor:'#1E293B',secondaryTextColor:'#F1F5F9',secondaryBorderColor:'#22D3EE',
+  tertiaryColor:'#131D33',tertiaryTextColor:'#F1F5F9',tertiaryBorderColor:'#475569',lineColor:'#94A3B8',textColor:'#F1F5F9',mainBkg:'#1E293B',nodeBorder:'#6366F1',
+  nodeTextColor:'#F1F5F9',clusterBkg:'#131D33',clusterBorder:'#475569',titleColor:'#F1F5F9',edgeLabelBackground:'#0F172A',
+  actorBkg:'#1E293B',actorBorder:'#6366F1',actorTextColor:'#F1F5F9',actorLineColor:'#64748B',signalColor:'#CBD5E1',signalTextColor:'#F1F5F9',
+  labelBoxBkgColor:'#1E293B',labelBoxBorderColor:'#6366F1',labelTextColor:'#F1F5F9',loopTextColor:'#F1F5F9',noteBkgColor:'#422006',noteTextColor:'#F1F5F9',noteBorderColor:'#F59E0B',
+  activationBkgColor:'#334155',activationBorderColor:'#94A3B8',
+  quadrant1Fill:'#1E1B4B',quadrant2Fill:'#172033',quadrant3Fill:'#1E293B',quadrant4Fill:'#3B2410',
+  quadrant1TextFill:'#F1F5F9',quadrant2TextFill:'#F1F5F9',quadrant3TextFill:'#F1F5F9',quadrant4TextFill:'#F1F5F9',
+  quadrantPointFill:'#F59E0B',quadrantPointTextFill:'#F1F5F9',quadrantXAxisTextFill:'#F1F5F9',quadrantYAxisTextFill:'#F1F5F9',quadrantTitleFill:'#F1F5F9',
+  quadrantInternalBorderStrokeFill:'#475569',quadrantExternalBorderStrokeFill:'#64748B'};
+dark.forEach((c,i)=>{tv['cScale'+i]=c;tv['cScaleLabel'+i]='#F1F5F9';tv['cScalePeer'+i]='#94A3B8'});
+mermaid.initialize({startOnLoad:false,theme:'base',themeVariables:tv,securityLevel:'strict',
+  flowchart:{curve:'basis',htmlLabels:true,useMaxWidth:true,padding:14,nodeSpacing:36,rankSpacing:46},
+  sequence:{useMaxWidth:true,mirrorActors:false,messageFontSize:20,actorFontSize:20,actorMargin:40,width:130,boxMargin:8,messageMargin:36},
+  quadrantChart:{chartWidth:620,chartHeight:520,pointLabelFontSize:20,quadrantLabelFontSize:20,xAxisLabelFontSize:20,yAxisLabelFontSize:20,titleFontSize:22},
+  timeline:{useMaxWidth:true},mindmap:{useMaxWidth:true}});
+let chain=Promise.resolve();
+window.renderMermaidIn=slide=>{chain=chain.then(async()=>{const nodes=[...slide.querySelectorAll('pre.mermaid:not([data-processed])')];
+  if(nodes.length){try{await mermaid.run({nodes})}catch(e){console.error('mermaid',e)}}});return chain};
+window.renderMermaidIn(document.querySelector('.slide.active'));
+</script>
+</body>
+</html>

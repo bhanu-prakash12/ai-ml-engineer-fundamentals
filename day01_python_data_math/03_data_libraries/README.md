@@ -1,5 +1,42 @@
 # 03 — Data Libraries: Pandas, Polars, PyArrow
 
+> Three tools, one shape of data: Pandas for ergonomic exploration, Polars for fast lazy queries, Arrow/Parquet as the shared columnar format between them.
+
+| | |
+|---|---|
+| **Day** | 1 — Python + Data + Math |
+| **Topic** | 03 — Data libraries: Pandas, Polars, PyArrow |
+| **Notebooks** | 3 (`01_pandas`, `02_polars`, `03_pyarrow`) plus `generate_dataset.py` and `data/` |
+| **Builds on** | [`02_numpy`](../02_numpy/README.md) |
+| **Leads to** | [`04_datasets`](../04_datasets/README.md) |
+
+## 📖 Short forms used in this topic
+
+| Term | Full form | What it is |
+|---|---|---|
+| **CSV** | Comma-Separated Values | Row-oriented plain-text table format; simple but large and untyped. |
+| **JSON** | JavaScript Object Notation | Text format for nested key-value data. |
+| **API** | Application Programming Interface | The functions/classes a library exposes (Pandas API, Polars expression API). |
+| **RAM** | Random-Access Memory | Main memory; "larger-than-RAM" data cannot be loaded all at once. |
+| **ML** | Machine Learning | Building models that learn from data. |
+| **SQL** | Structured Query Language | Database query language; `merge`/`join` follow SQL join semantics. |
+| **HF** | Hugging Face | Company/hub behind the `datasets` library, which uses Arrow. |
+| **DataFrame** | Data frame | A 2-D table with labelled columns. |
+| **Series** | Series | A labelled 1-D column of values (Pandas). |
+| **LazyFrame** | Lazy data frame | Polars object that records a query plan and runs it on `.collect()`. |
+| **Parquet** | Apache Parquet | Compressed columnar file format for tables. |
+| **Arrow** | Apache Arrow | Columnar in-memory format shared across tools. |
+| **EDA** | Exploratory Data Analysis | Inspecting and summarising data before modelling (what Pandas is used for). |
+
+## 🧠 In plain words
+
+Real ML data is mostly tables. Pandas, Polars and PyArrow are three Python tools for loading, cleaning, combining and saving tables. They differ in speed, memory use and how they run your code, but they can hand data to each other cheaply because they share the Arrow column layout.
+
+## 🎒 Analogy to remember
+
+A table is a **filing cabinet**. Pandas is a **hands-on clerk**: does each instruction immediately, easy to talk to. Polars is a **planner clerk**: you hand over the whole job (lazy), and they reorder steps and use several helpers before touching a file. Arrow/Parquet is the **standard folder format** every clerk understands, so no one retypes anything.
+*Where it breaks down:* Pandas is not literally slow for everything; for small data its eager style is often simpler and fast enough.
+
 ## Learning objectives
 
 By the end of this topic you can:
@@ -41,13 +78,105 @@ columnar interchange format behind Hugging Face `datasets`, Spark, and most data
 
 ```mermaid
 flowchart LR
-  A[CSV/JSON on disk] --> B[Pandas DataFrame: explore, clean, groupby]
-  A --> C[Polars LazyFrame: expressions, query optimization]
-  B -. Arrow memory layout .-> D[PyArrow Table]
-  C -. Arrow memory layout .-> D
-  D --> E[Parquet file: columnar, compressed, shared format]
-  E --> F[Hugging Face datasets / training pipeline]
+  A["CSV or JSON on disk"] --> B
+  A --> C
+  subgraph Tools["Processing"]
+    B["Pandas DataFrame: explore, clean, groupby"]
+    C["Polars LazyFrame: expressions, query optimization"]
+  end
+  B -.->|"Arrow memory layout"| D["PyArrow Table"]
+  C -.->|"Arrow memory layout"| D
+  D --> E["Parquet file: columnar, compressed, shared format"]
+  E --> F["Hugging Face datasets and training pipeline"]
+  classDef src fill:#FEF3C7,stroke:#D97706,color:#1a1a1a;
+  classDef pd fill:#DBEAFE,stroke:#2563EB,color:#1a1a1a;
+  classDef pl fill:#FFEDD5,stroke:#EA580C,color:#1a1a1a;
+  classDef arrow fill:#EDE9FE,stroke:#7C3AED,color:#1a1a1a;
+  classDef out fill:#DCFCE7,stroke:#16A34A,color:#1a1a1a;
+  class A src;
+  class B pd;
+  class C pl;
+  class D,E arrow;
+  class F out;
 ```
+
+## 🔍 Concepts explained
+
+**Category chips:** 🟦 Pandas · 🟧 Polars · 🟪 Arrow / Parquet · 🟥 Pitfalls
+
+### Differences at a glance
+
+| | 🟦 Pandas | 🟧 Polars | 🟪 PyArrow |
+|---|---|---|---|
+| **Role** | Explore, clean, prototype | Fast / large-data transforms | In-memory columnar format + Parquet I/O |
+| **Execution** | Eager (each line runs now) | Eager or **lazy** (`.lazy()`, `.collect()`) | Compute kernels, mostly eager |
+| **Style** | Method chains, boolean masks, index | Expressions: `pl.col("x") > 0` | Tables and arrays |
+| **Strength** | Richest ecosystem, ergonomic | Parallel, query optimisation, streaming | Zero-copy sharing, Parquet |
+| **Pitfall** | `.apply()` slow; `MultiIndex` after groupby | Lazy defers errors/cost until `.collect()` | Lower-level, fewer analysis helpers |
+| **Pick when** | Small/medium data, notebooks | Big data, speed, pipelines | Interchange and storage |
+
+### 🟦 Pandas building blocks
+
+**`groupby` + `agg`**
+- **Definition:** split rows by a key, apply an aggregate to each group, combine results.
+- **Analogy:** sort receipts into piles by customer, then total each pile.
+- **Code idea:** `df.groupby("category").agg(n=("id", "count"))`
+- **Use when / watch out:** per-user/per-class stats; `reset_index()` to flatten, and de-duplicate first or you double-count.
+
+| Join-type operation | Combines | Like in SQL | Pitfall |
+|---|---|---|---|
+| `merge` / `join` | columns, matched on keys | `JOIN` | duplicate keys multiply rows |
+| `concat` | stacks rows (or columns) as-is | `UNION ALL` | column mismatch gives NaN |
+| `pivot` / `melt` | reshape long to wide / wide to long | - | duplicate index/column pairs break `pivot` |
+
+**Missing values and duplicates**
+- Detect with `isna` / `duplicated`; treat with `fillna`, `dropna`, `drop_duplicates`.
+- **Watch out:** decide *drop vs fill* deliberately; dropping silently shifts class balance.
+
+### 🟧 Polars: expressions and lazy execution
+- **Definition:** an *expression* describes a computation on columns; a `LazyFrame` collects expressions into a plan the optimiser can rewrite (push filters and column selection down) before running.
+- **Analogy:** hand the clerk the whole shopping list so they plan one efficient route.
+- **Code idea:** `pl.scan_csv(...)` or `df.lazy().filter(pl.col("x") > 0).select("a").collect()`; inspect with `.explain()`.
+- **Use when / watch out:** large data and multi-step pipelines. Nothing runs until `.collect()`.
+
+### 🟪 Arrow and Parquet
+
+| | CSV | Parquet |
+|---|---|---|
+| Layout | row-oriented text | columnar binary |
+| Types | not stored (inferred) | stored in schema |
+| Size | large | compressed, much smaller |
+| Read a few columns | must scan whole file | reads only those columns |
+| Human-readable | yes | no |
+
+- **Arrow** is the in-memory counterpart: Pandas (with Arrow-backed dtypes), Polars and Hugging Face `datasets` can share it, often without copying.
+
+> [!NOTE]
+> "Zero-copy" means different libraries point at the same memory buffers rather than duplicating them; it depends on compatible types, so a conversion can still copy.
+
+> [!WARNING]
+> `.apply()` with a Python function runs per row/element in Python. Prefer vectorized Pandas methods or Polars expressions.
+
+```mermaid
+flowchart TD
+  Q{"How big and how repeated is the work?"}
+  Q -->|"small, exploratory"| PD["Pandas"]
+  Q -->|"large or multi-step pipeline"| PL["Polars lazy"]
+  Q -->|"store or share between tools"| PA["Arrow table plus Parquet"]
+  PD -.->|"to_parquet / from_pandas"| PA
+  PL -.->|"write_parquet / to_arrow"| PA
+  classDef ask fill:#FEF3C7,stroke:#D97706,color:#1a1a1a;
+  classDef pd fill:#DBEAFE,stroke:#2563EB,color:#1a1a1a;
+  classDef pl fill:#FFEDD5,stroke:#EA580C,color:#1a1a1a;
+  classDef pa fill:#EDE9FE,stroke:#7C3AED,color:#1a1a1a;
+  class Q ask;
+  class PD pd;
+  class PL pl;
+  class PA pa;
+```
+
+> [!TIP]
+> Mixing is normal: explore in Pandas, run the heavy pipeline in Polars, persist as Parquet.
 
 ## Important APIs / functions
 

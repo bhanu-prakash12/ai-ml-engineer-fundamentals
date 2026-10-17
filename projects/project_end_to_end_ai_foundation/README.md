@@ -1,5 +1,43 @@
 # Capstone — End-to-End AI Foundation Project
 
+> One real dataset, one full pipeline: everything from Days 1-3 wired together, from raw data to inference.
+
+| | |
+|---|---|
+| **Day** | Capstone (after Days 1-3) |
+| **Topic** | End-to-end AI foundation pipeline |
+| **Notebooks** | 1 (`01_end_to_end_pipeline`) |
+| **Builds on** | Day 1 (Python, NumPy, Pandas, datasets), Day 2 (evaluation, feature engineering, generalization), Day 3 (PyTorch data, models, training) |
+| **Leads to** | The companion `llm-fine-tuning/` curriculum |
+
+## 📖 Short forms used in this topic
+
+| Term | Full form | What it is |
+|---|---|---|
+| **AI** | Artificial Intelligence | Systems that perform tasks needing human-like intelligence. |
+| **ML** | Machine Learning | Learning patterns from data instead of hand-coding rules. |
+| **MLP** | Multi-Layer Perceptron | Feed-forward neural network of stacked fully connected layers. |
+| **F1** | F1 score | Harmonic mean of precision and recall. |
+| **ROC** | Receiver Operating Characteristic | Curve of true-positive rate vs false-positive rate across thresholds. |
+| **AUC** | Area Under the Curve | Single number summarising a curve; ROC-AUC of 0.5 is chance, 1.0 is perfect ranking. |
+| **UCI** | University of California, Irvine | Host of the ML Repository where this dataset originated. |
+| **CPU** | Central Processing Unit | The processor this small project runs on. |
+| **L2** | L2 regularization | Penalty on squared weights; `weight_decay` in PyTorch optimizers is the related mechanism. |
+| **LLM** | Large Language Model | Big neural language model; the later `llm-fine-tuning/` track. |
+| **RAG** | Retrieval-Augmented Generation | LLM answers grounded in retrieved documents (later curriculum). |
+| **Dataset / DataLoader** | - | PyTorch classes: one exposes samples, the other batches and shuffles them. |
+| **`nn.Module`** | Neural network module | Base class for PyTorch models. |
+| **`model.eval()` / `torch.no_grad()`** | Evaluation mode / no-gradient context | Switch layers like dropout to inference behaviour / stop tracking gradients. |
+
+## 🧠 In plain words
+
+This capstone trains a small neural network to tell malignant from benign tumours using 30 measurements per sample. Nothing new is taught; the point is to run every earlier step in order, correctly, once: clean and split data, scale without leaking, batch it, train, evaluate with the right metrics, save the best model and use it.
+
+## 🎒 Analogy to remember
+
+It is a **restaurant kitchen line**: prep (clean/split), seasoning that is tasted on practice dishes only (scaler fit on train), cooking (training), a taste test by someone who has never seen the recipe (test set), and finally serving (inference). A shortcut at any station spoils the dish.
+*Where it breaks down:* a real kitchen cooks continuously; a model pipeline is retrained and re-evaluated as data changes.
+
 ## Objective
 
 Run the complete pipeline this curriculum has built, topic by topic, start to finish on one
@@ -33,6 +71,54 @@ small enough to run entirely on CPU in seconds.
 - **Schema**: 30 continuous numeric features (e.g. `mean radius`, `mean texture`, `worst area`); target: `0` = malignant, `1` = benign.
 - **Samples**: 569 total (212 malignant, 357 benign — a mild, realistic class imbalance).
 - **License**: public domain / freely redistributable via scikit-learn.
+
+## 🔍 Concepts explained
+
+**Category chips:** 🟦 Data (Day 1) · 🟩 Preparation (Day 2) · 🟧 Model and training (Day 3) · 🟪 Evaluation and inference
+
+| Stage | Chip | Idea | Source topic | Watch out |
+|---|---|---|---|---|
+| Preprocess | 🟦 | load into NumPy/Pandas, check types | `01_python`-`03_data_libraries` | missing values, duplicates |
+| Split | 🟦 | train / val / test, fixed seed | `04_datasets`, `12_ml_evaluation` | split before fitting anything; consider stratifying for the imbalance |
+| Scale | 🟩 | z-score using **train** statistics | `13_feature_engineering` | leakage if fit on all data |
+| Batch | 🟧 | `Dataset` + `DataLoader` | `21_pytorch_data` | shuffle train only |
+| Model | 🟧 | MLP as `nn.Module` | `20_pytorch_models` | output layer and loss must match the task (binary classification here) |
+| Train | 🟧 | loop, optimizer, checkpoint best val | `22_pytorch_training` | restore the **best** checkpoint, not the last |
+| Evaluate | 🟪 | precision, recall, F1, ROC-AUC | `12_ml_evaluation` | accuracy alone hides imbalance (212 vs 357) |
+| Infer | 🟪 | `model.eval()` + `torch.no_grad()` | `19_pytorch_autograd`, `20_pytorch_models` | forgetting `eval()` leaves dropout/batch-norm in training mode |
+
+> [!IMPORTANT]
+> In a tumour classifier the cost of errors is asymmetric: a missed malignant case (false negative) is worse than a false alarm. That is why recall and ROC-AUC are reported, not just accuracy.
+
+> [!WARNING]
+> Scaler fit on the full dataset, duplicates across splits, or choosing a checkpoint on the test set are the three leakage traps this pipeline is designed to avoid.
+
+```mermaid
+flowchart LR
+  subgraph D1["Day 1: data"]
+    A["Raw data: breast cancer, 569 x 30"] --> B["Clean and preprocess"]
+  end
+  subgraph D2["Day 2: preparation"]
+    C["Split train / val / test"] --> D["Scale: fit on train only"]
+  end
+  subgraph D3["Day 3: model and training"]
+    E["Dataset and DataLoader"] --> F["MLP nn.Module"] --> G["Training loop plus best checkpoint"]
+  end
+  subgraph EV["Evaluate and serve"]
+    H["Precision, recall, F1, ROC-AUC"] --> I["Reload best, eval mode, no_grad inference"]
+  end
+  B --> C
+  D --> E
+  G --> H
+  classDef day1 fill:#DBEAFE,stroke:#2563EB,color:#1a1a1a;
+  classDef day2 fill:#DCFCE7,stroke:#16A34A,color:#1a1a1a;
+  classDef day3 fill:#FEF3C7,stroke:#D97706,color:#1a1a1a;
+  classDef ev fill:#EDE9FE,stroke:#7C3AED,color:#1a1a1a;
+  class A,B day1;
+  class C,D day2;
+  class E,F,G day3;
+  class H,I ev;
+```
 
 ## Notebook
 

@@ -1,5 +1,49 @@
 # 12 — ML Evaluation
 
+> A model is only as trustworthy as the way you measured it: pick the right metric, and measure it on honest splits.
+
+| At a glance | |
+|---|---|
+| **Day** | 2 — Machine Learning |
+| **Topic** | Classification metrics, ROC vs PR curves, ranking metrics, cross-validation, leakage |
+| **Notebooks** | 3 (`01_classification_metrics`, `02_ranking_metrics`, `03_cross_validation`) |
+| **Builds on** | [`11_generalization`](../11_generalization/README.md), [`08_classification`](../08_classification/README.md) |
+| **Leads to** | [`13_feature_engineering`](../13_feature_engineering/README.md), [`14_hyperparameter_tuning`](../14_hyperparameter_tuning/README.md) |
+
+## 📖 Short forms used in this topic
+
+| Term | Full form | What it is |
+|---|---|---|
+| **TP / TN** | True Positive / True Negative | Positive predicted positive / negative predicted negative. |
+| **FP / FN** | False Positive / False Negative | Negative predicted positive / positive predicted negative. |
+| **TPR** | True Positive Rate | `TP/(TP+FN)`; same as recall (sensitivity). |
+| **FPR** | False Positive Rate | `FP/(FP+TN)`; equals 1 − specificity. |
+| **F1** | F1 score | Harmonic mean of precision and recall. |
+| **ROC** | Receiver Operating Characteristic | Curve of TPR vs FPR across thresholds. |
+| **AUC** | Area Under the Curve | Single-number summary of a curve; ROC-AUC = chance a random positive is scored above a random negative. |
+| **PR-AUC** | Precision-Recall Area Under the Curve | Area under the precision-vs-recall curve; more informative when positives are rare. |
+| **MAE** | Mean Absolute Error | Average absolute prediction error. |
+| **MSE** | Mean Squared Error | Average squared prediction error. |
+| **RMSE** | Root Mean Squared Error | Square root of MSE, in the target's units. |
+| **R²** | Coefficient of determination | Fraction of target variance explained by the model. |
+| **@K** | Top-K cutoff | Metric computed only on the first K ranked results. |
+| **RR** | Reciprocal Rank | 1 / rank of the first relevant result for one query. |
+| **MRR** | Mean Reciprocal Rank | Average RR over queries. |
+| **AP** | Average Precision | Mean of precision@k at each rank where a relevant item appears. |
+| **MAP** | Mean Average Precision | Mean of AP over queries (ranking metric, not Maximum A Posteriori). |
+| **DCG** | Discounted Cumulative Gain | Sum of relevance scores discounted by log of rank position. |
+| **IDCG** | Ideal DCG | DCG of the best possible ordering; used to normalise. |
+| **NDCG** | Normalized Discounted Cumulative Gain | DCG divided by IDCG, so scores fall in 0 to 1. |
+| **CV** | Cross-Validation | Repeated train/validation splits to estimate generalization. |
+
+## 🧠 In plain words
+
+Evaluation answers "how good is this model really?". You count the kinds of mistakes it makes (confusion matrix), choose a metric that matches what errors cost, and measure on data the model never trained on, ideally several different splits (cross-validation) so one lucky split does not fool you.
+
+## 🎒 Analogy to remember
+
+A smoke detector. Accuracy says "no fire 99% of days", useless if fires are rare. Precision is how often an alarm was a real fire; recall is how many real fires it caught. Cross-validation is testing it in several different houses, not just one. Where it breaks: ranking metrics have no smoke-detector equivalent; think of a search page where the best result should be first.
+
 ## Learning objectives
 
 By the end of this topic you can:
@@ -36,15 +80,89 @@ prevents an optimistic, non-reproducible performance claim.
 
 ```mermaid
 flowchart TD
-  A[Predictions + true labels] --> B[Confusion matrix]
-  B --> C[Accuracy / Precision / Recall / Specificity / F1]
-  A --> D[Scores at every threshold]
-  D --> E[ROC-AUC]
-  D --> F[PR-AUC: better under imbalance]
-  A --> G[Ranked results]
-  G --> H[Precision@K / Recall@K / MRR / MAP / NDCG]
-  I[Single train/val split] -.less reliable than.-> J[Stratified K-fold cross-validation]
+  A["Predictions and true labels"] --> B["Confusion matrix"]
+  subgraph CM["Threshold-based"]
+    C["Accuracy, Precision, Recall, Specificity, F1"]
+  end
+  subgraph TH["Threshold-free"]
+    E["ROC-AUC"]
+    F["PR-AUC: better under imbalance"]
+  end
+  subgraph RK["Ranking"]
+    H["Precision at K, Recall at K, MRR, MAP, NDCG"]
+  end
+  B --> C
+  A --> D["Scores at every threshold"]
+  D --> E
+  D --> F
+  A --> G["Ranked results"]
+  G --> H
+  I["Single train/val split"] -.->|"less reliable than"| J["Stratified K-fold cross-validation"]
+  J --> K["No leakage: refit preprocessing inside each fold"]
+  classDef data fill:#DBEAFE,stroke:#2563EB,color:#1a1a1a;
+  classDef good fill:#DCFCE7,stroke:#16A34A,color:#1a1a1a;
+  classDef warn fill:#FEF3C7,stroke:#D97706,color:#1a1a1a;
+  classDef bad fill:#FEE2E2,stroke:#DC2626,color:#1a1a1a;
+  classDef adv fill:#EDE9FE,stroke:#7C3AED,color:#1a1a1a;
+  class A,B,D,G data;
+  class C warn;
+  class E,F adv;
+  class H good;
+  class I bad;
+  class J,K good;
 ```
+
+## 🔍 Concepts explained
+
+Chips: 🟧 threshold-based classification, 🟪 threshold-free (curve) metrics, 🟩 ranking metrics, 🟦 validation schemes.
+
+### 🟧 Confusion matrix and its metrics
+- **Definition**: counts of TP, FP, FN, TN; every threshold metric derives from it.
+- **Analogy**: a smoke detector's log of real alarms, false alarms, missed fires and quiet days.
+- **Formula**: accuracy `(TP+TN)/N`; precision `TP/(TP+FP)`; recall `TP/(TP+FN)`; specificity `TN/(TN+FP)`; F1 `2PR/(P+R)`.
+- **Use when / watch out**: pick by error cost; accuracy misleads under imbalance.
+
+### 🟪 ROC-AUC vs PR-AUC
+- **Definition**: area under TPR-vs-FPR (ROC) or precision-vs-recall (PR) curves across all thresholds.
+- **Analogy**: grading the detector across every possible sensitivity dial setting.
+- **Code idea**: `roc_auc_score`, `average_precision_score`.
+- **Use when / watch out**: prefer PR-AUC when positives are rare; ROC-AUC can look rosy because FPR is diluted by a huge negative class.
+
+### 🟩 Ranking metrics
+- **Definition**: score an ordered result list for relevance.
+- **Analogy**: judging a search page by how high the good links sit.
+- **Formula**: `RR = 1/rank_first_relevant`; `NDCG = DCG/IDCG`.
+- **Use when / watch out**: search and recommendation; NDCG handles graded relevance, MRR only the first hit.
+
+### 🟦 Cross-validation, stratified K-fold, leakage
+- **Definition**: rotate which fold is held out; stratified keeps class ratios per fold; leakage is outside information shaping a fold's score.
+- **Analogy**: testing in several houses, never practicing in the test house.
+- **Code idea**: `cross_val_score(make_pipeline(StandardScaler(), model), X, y, cv=StratifiedKFold(...))`.
+- **Use when / watch out**: put scalers and selectors inside the pipeline so they refit per fold.
+
+### Differences at a glance
+
+| Metric | Chip | Answers | Prefer when | Pitfall |
+|---|---|---|---|---|
+| Accuracy | 🟧 | Fraction correct | Balanced classes | Hides minority failures |
+| Precision | 🟧 | Of predicted positives, how many real | False positives costly | Ignores misses |
+| Recall | 🟧 | Of real positives, how many caught | False negatives costly | Ignores false alarms |
+| F1 | 🟧 | Balance of precision and recall | One number needed | Ignores TN, fixed threshold |
+| ROC-AUC | 🟪 | Ranking quality, all thresholds | Roughly balanced data | Optimistic under imbalance |
+| PR-AUC | 🟪 | Positive-class quality | Rare positives | Baseline equals positive rate |
+| Precision@K / Recall@K | 🟩 | Top-K relevance | Fixed result-page size | Ignores order within K |
+| MRR | 🟩 | How high the first hit is | One right answer | Ignores later hits |
+| MAP | 🟩 | Precision across all hits | Binary relevance | No graded relevance |
+| NDCG | 🟩 | Position-weighted graded gain | Graded relevance | Needs ideal ordering |
+
+> [!WARNING]
+> Fit scalers and feature selectors inside each CV fold (for example via a pipeline). Fitting them on the full dataset first leaks fold information.
+
+> [!IMPORTANT]
+> Notebook 01 builds a deliberately imbalanced dataset to show high accuracy with poor minority recall.
+
+> [!TIP]
+> Report mean and standard deviation across folds; the spread tells you whether a model difference is real.
 
 ## Important APIs / functions
 

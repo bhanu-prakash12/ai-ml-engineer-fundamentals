@@ -1,5 +1,44 @@
 # 05 — ML Mathematics: Linear Algebra, Probability/Statistics, Calculus
 
+> Three languages power all of ML: linear algebra represents data, probability handles uncertainty, calculus explains how models learn.
+
+| | |
+|---|---|
+| **Day** | 1 — Python + Data + Math |
+| **Topic** | 05 — ML mathematics: linear algebra, probability/statistics, calculus |
+| **Notebooks** | 3 (`01_linear_algebra`, `02_probability_statistics`, `03_calculus_and_gradient_descent`) |
+| **Builds on** | [`02_numpy`](../02_numpy/README.md) |
+| **Leads to** | Day 2 (regression, PCA, optimization) and Day 3 [`16_backpropagation`](../../day03_deep_learning/16_backpropagation/README.md) |
+
+## 📖 Short forms used in this topic
+
+| Term | Full form | What it is |
+|---|---|---|
+| **SVD** | Singular Value Decomposition | Factorises any matrix `A = U Σ Vᵀ` (rotate, scale, rotate). |
+| **PCA** | Principal Component Analysis | Projects data onto the directions of largest variance (top eigenvectors of the covariance matrix, or via SVD). |
+| **MSE** | Mean Squared Error | Average of squared prediction errors; a common regression loss. |
+| **SGD** | Stochastic Gradient Descent | Gradient descent using random mini-batches (samples) to estimate the gradient. |
+| **CLT** | Central Limit Theorem | Averages of many independent samples tend toward a normal distribution. |
+| **L2** | L2 norm / L2 regularization | Euclidean length `‖v‖₂`; as a penalty it adds the squared weights to the loss. |
+| **ML** | Machine Learning | Building models that learn from data. |
+| **E[X]** | Expected value | Probability-weighted average of a random variable. |
+| **Var / Cov / Corr** | Variance / Covariance / Correlation | Spread, joint spread, and covariance scaled to `[-1, 1]`. |
+| **P(A\|B)** | Conditional probability | Probability of A given B happened. |
+| **θ** | Theta | The model's parameters. |
+| **η** | Eta | Learning rate: the gradient-descent step size. |
+| **∇L** | Gradient of the loss | Vector of partial derivatives of the loss `L` w.r.t. each parameter. |
+| **λ, v** | Eigenvalue, eigenvector | `A v = λ v`: a direction `v` that `A` only scales, by `λ`. |
+| **f'(x)** | Derivative | Instantaneous rate of change of `f`. |
+
+## 🧠 In plain words
+
+Linear algebra is how we store and transform data (vectors and matrices). Probability and statistics describe what is uncertain and how to update beliefs from evidence. Calculus tells us how a small change in a model's parameters changes its error, which is exactly what gradient descent uses to improve the model.
+
+## 🎒 Analogy to remember
+
+Training a model is **hiking down a foggy mountain**. Linear algebra is the **map coordinates** (where you are, as a vector). Calculus is the **slope under your feet** (the gradient says which way is uphill, so you step the other way). Probability is your **confidence about what the fog hides**.
+*Where it breaks down:* real loss surfaces have millions of dimensions, saddle points and noisy gradients - the 2-D mountain is only intuition.
+
 ## Learning objectives
 
 By the end of this topic you can:
@@ -45,16 +84,119 @@ the chain rule applied repeatedly — if that's solid here, backprop won't feel 
 
 ```mermaid
 flowchart LR
-  A[Scalars/vectors/matrices] --> B[Dot product & matmul]
-  B --> C[Norms, eigenvalues/eigenvectors, SVD]
-  D[Probability & Bayes] --> E[Random variables, E/Var/Cov/Corr]
-  F[Derivative] --> G[Partial derivative & gradient]
-  G --> H[Chain rule]
-  H --> I[Gradient descent: θ ← θ - η∇L]
-  C -.-> J[PCA / dimensionality reduction]
-  E -.-> K[Loss functions, evaluation metrics]
-  I --> L[Day 3: backpropagation is the chain rule, repeated]
+  subgraph LA["Linear algebra"]
+    A["Scalars, vectors, matrices"] --> B["Dot product and matmul"] --> C["Norms, eigen, SVD"]
+  end
+  subgraph PS["Probability and statistics"]
+    D["Probability and Bayes"] --> E["Random variables: E, Var, Cov, Corr"]
+  end
+  subgraph CA["Calculus"]
+    F["Derivative"] --> G["Partial derivative and gradient"] --> H["Chain rule"] --> I["Gradient descent: theta = theta - eta * gradient"]
+  end
+  C -.-> J["PCA and dimensionality reduction"]
+  E -.-> K["Loss functions and evaluation metrics"]
+  I --> L["Day 3: backpropagation is the chain rule, repeated"]
+  classDef la fill:#DBEAFE,stroke:#2563EB,color:#1a1a1a;
+  classDef ps fill:#DCFCE7,stroke:#16A34A,color:#1a1a1a;
+  classDef ca fill:#FEF3C7,stroke:#D97706,color:#1a1a1a;
+  classDef out fill:#EDE9FE,stroke:#7C3AED,color:#1a1a1a;
+  class A,B,C la;
+  class D,E ps;
+  class F,G,H,I ca;
+  class J,K,L out;
 ```
+
+## 🔍 Concepts explained
+
+**Category chips:** 🟦 Linear algebra · 🟩 Probability and statistics · 🟧 Calculus · 🟥 Pitfalls
+
+### 🟦 Linear algebra
+
+| Object | Dimensions | Example | ML use |
+|---|---|---|---|
+| Scalar | 0-D | `3.0` | learning rate, loss value |
+| Vector | 1-D | `(n,)` | one sample's features, embedding |
+| Matrix | 2-D | `(m, n)` | batch of samples, weights |
+| Tensor | N-D | `(b, h, w, c)` | images, sequences |
+
+**Dot product**
+- **Definition:** `u · v = Σ uᵢvᵢ`; equals `‖u‖‖v‖cosθ`.
+- **Analogy:** how much two arrows point the same way.
+- **Use when / watch out:** similarity, every linear layer; scale-dependent unless vectors are normalised.
+
+**Matrix multiplication**
+- **Definition:** `(m,n) @ (n,p) -> (m,p)`; composes linear transformations.
+- **Watch out:** not commutative (`AB != BA` in general); `(AB)ᵀ = BᵀAᵀ`.
+
+**Norms**
+- **Definition:** `‖v‖₂ = sqrt(Σ vᵢ²)`, the length; `‖v‖₁ = Σ |vᵢ|`.
+- **Use when / watch out:** L2 for distances and weight decay; L1 encourages sparsity.
+
+**Eigen-decomposition and SVD**
+
+| | Eigen-decomposition | SVD |
+|---|---|---|
+| Applies to | square matrices (best: symmetric, e.g. covariance) | any matrix, any shape |
+| Form | `A = V Λ V⁻¹` | `A = U Σ Vᵀ` |
+| Meaning | directions only scaled by `A` | rotate, scale, rotate |
+| ML use | PCA via covariance matrix | PCA, low-rank approximation, recommenders |
+
+- **Analogy:** a stretchy sheet - eigenvectors are the directions that only stretch, never twist.
+
+### 🟩 Probability and statistics
+
+**Bayes' theorem**
+- **Definition:** `P(A|B) = P(B|A) P(A) / P(B)`; update a prior with evidence.
+- **Analogy:** a detective revising a suspect list after each clue.
+- **Use when / watch out:** diagnostic tests. A 99%-accurate test for a rare condition still yields mostly false positives because the **base rate** `P(A)` is tiny.
+
+| Measure | Formula | Reads as | Pitfall |
+|---|---|---|---|
+| Expected value | `E[X] = Σ x·P(x)` | long-run average | can be a value never observed |
+| Variance | `E[(X - E[X])²]` | average squared spread | units are squared; use std |
+| Covariance | `E[(X - μx)(Y - μy)]` | do they move together | scale-dependent |
+| Correlation | `Cov(X,Y) / (σx σy)` in `[-1, 1]` | scale-free linear association | misses non-linear links; not causation |
+
+| Distribution | Models | Parameters |
+|---|---|---|
+| Bernoulli | one yes/no trial | `p` |
+| Binomial | number of successes in `n` trials | `n`, `p` |
+| Normal | many natural measurements, averages (CLT) | mean, std |
+
+### 🟧 Calculus
+
+| Concept | Definition | Role in ML |
+|---|---|---|
+| Derivative `f'(x)` | slope / rate of change | sensitivity of loss to one input |
+| Partial derivative | derivative w.r.t. one variable, others fixed | sensitivity to one parameter |
+| Gradient `∇L` | vector of all partials; points to steepest **increase** | direction to move **against** |
+| Chain rule | `d/dx f(g(x)) = f'(g(x))·g'(x)` | backpropagation |
+| Gradient descent | `θ ← θ - η∇L(θ)` | the learning step |
+
+> [!WARNING]
+> Learning rate `η` too small is slow; too large oscillates or diverges. Zero gradient only means a **critical point** (minimum, maximum or saddle).
+
+> [!IMPORTANT]
+> Backpropagation is the chain rule applied repeatedly through the computation graph - nothing more.
+
+```mermaid
+flowchart TD
+  P["Params theta"] --> L["Compute loss L"]
+  L --> G["Gradient of L w.r.t. theta"]
+  G --> U["Update: theta = theta - eta * gradient"]
+  U --> C{"Loss small enough?"}
+  C -->|"no"| L
+  C -->|"yes"| Z["Trained model"]
+  classDef step fill:#DBEAFE,stroke:#2563EB,color:#1a1a1a;
+  classDef calc fill:#FEF3C7,stroke:#D97706,color:#1a1a1a;
+  classDef done fill:#DCFCE7,stroke:#16A34A,color:#1a1a1a;
+  class P,L step;
+  class G,U,C calc;
+  class Z done;
+```
+
+> [!TIP]
+> Sanity check any hand-derived gradient with a finite difference: `(f(x+h) - f(x-h)) / 2h` should match closely.
 
 ## Important APIs / functions
 

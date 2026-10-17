@@ -1,5 +1,40 @@
 # 08 — Classification
 
+> Pick the right model to put a label on each example — and know why it wins or fails.
+
+| At a glance | |
+|---|---|
+| **Day** | Day 2 — Machine Learning |
+| **Topic** | Classification algorithms (linear, instance, tree, ensemble, margin, probabilistic) |
+| **Notebooks** | 2 (`01_classification_fundamentals`, `02_xgboost_lightgbm`) |
+| **Builds on** | [`07_regression`](../07_regression/README.md) |
+| **Leads to** | [`09_unsupervised_learning`](../09_unsupervised_learning/README.md), [`12_ml_evaluation`](../12_ml_evaluation/README.md) |
+
+## 📖 Short forms used in this topic
+
+| Term | Full form | What it is |
+|---|---|---|
+| **k-NN** | k-Nearest Neighbors | Predicts from the majority label of the k closest training points. |
+| **SVM** | Support Vector Machine | Classifier that finds the maximum-margin separating boundary. |
+| **SVC** | Support Vector Classifier | scikit-learn's SVM classifier class (`sklearn.svm.SVC`). |
+| **RBF** | Radial Basis Function | Similarity kernel that decays with distance; a common SVM kernel for non-linear boundaries. |
+| **XGBoost** | eXtreme Gradient Boosting | Fast, regularised gradient-boosted decision-tree library. |
+| **LightGBM** | Light Gradient Boosting Machine | Histogram-based gradient-boosted tree library, optimised for speed and memory. |
+| **GBM** | Gradient Boosting Machine | Trees built sequentially, each correcting the previous errors. |
+| **OpenMP** | Open Multi-Processing | Multi-threading runtime XGBoost/LightGBM need (`libomp` on macOS). |
+| **XOR** | Exclusive OR | Pattern (true only if inputs differ) that no single straight line can separate. |
+| **F1** | F1 score | Harmonic mean of precision and recall. |
+| **ROC** | Receiver Operating Characteristic | Curve of true-positive rate vs false-positive rate across thresholds. |
+| **AUC** | Area Under the Curve | Single-number summary of a curve; ROC-AUC = chance a random positive is ranked above a random negative. |
+
+## 🧠 In plain words
+
+Classification predicts a *category* (spam / not spam, which digit, which intent) instead of a number. Different algorithms draw the boundary between categories in different ways: straight lines, vote of neighbours, a flowchart of yes/no questions, a committee of flowcharts, a widest-gap street, or probability bookkeeping. No single one wins everywhere.
+
+## 🎒 Analogy to remember
+
+Sorting mail into bins. Logistic regression uses one straight dividing rule; k-NN asks the nearest neighbours' houses what they are; a decision tree follows a checklist of questions; a random forest takes a vote from many different checklists; boosting has each new clerk fix the previous clerks' mistakes. Where it breaks down: real mail has a fixed label, but ML must also guess well on mail it has never seen (generalization).
+
 ## Learning objectives
 
 By the end of this topic you can:
@@ -31,18 +66,134 @@ a categorical target).
 - **SVM**: finds the maximum-margin separating hyperplane (optionally using a kernel trick for non-linear boundaries). *Strengths*: effective in high dimensions, strong theoretical guarantees. *Weaknesses*: doesn't scale well to very large datasets, requires careful kernel/hyperparameter choice.
 - **Naive Bayes**: applies Bayes' theorem assuming features are conditionally independent given the class. *Strengths*: extremely fast, works surprisingly well for text classification despite the "naive" independence assumption. *Weaknesses*: the independence assumption is usually false, which can bias probability estimates (even when the final classification is still correct).
 
+## 🔍 Concepts explained
+
+> [!NOTE]
+> Group chips: 🟦 linear / probabilistic, 🟩 tree-based and ensembles, 🟧 instance / margin based, 🟪 task framing.
+
+### 🟪 Binary / multiclass / multilabel
+- **Definition**: binary = 2 exclusive classes; multiclass = more than 2 exclusive classes; multilabel = each sample can carry several labels.
+- **Analogy**: one yes/no switch; a multiple-choice question; a tag cloud.
+- **Use when / watch out**: multilabel is not multiclass — labels are not mutually exclusive.
+
+### 🟦 Logistic regression
+- **Definition**: a linear score passed through a sigmoid to give a probability, trained with log-loss.
+- **Analogy**: a weighted checklist converted to a percentage.
+- **Code idea**: `LogisticRegression(max_iter=1000).fit(X, y)`.
+- **Use when / watch out**: interpretable baseline; fails on XOR-like, non-linearly-separable data.
+
+### 🟦 Naive Bayes
+- **Definition**: Bayes' theorem assuming features are independent given the class.
+- **Analogy**: judging an email by tallying each word's spam-ness separately.
+- **Code idea**: `GaussianNB().fit(X, y)`.
+- **Use when / watch out**: very fast text baseline; probabilities are often poorly calibrated.
+
+### 🟧 k-NN
+- **Definition**: vote among the `k` closest training points.
+- **Analogy**: asking your nearest neighbours which party to join.
+- **Code idea**: `KNeighborsClassifier(n_neighbors=5)`.
+- **Use when / watch out**: scale features; small `k` gives jagged boundaries, large `k` smooth ones; slow inference.
+
+### 🟧 SVM
+- **Definition**: find the hyperplane with the widest margin; the kernel trick (e.g. RBF) allows non-linear boundaries.
+- **Analogy**: building the widest possible street between two neighbourhoods.
+- **Code idea**: `SVC(kernel="rbf")`.
+- **Use when / watch out**: scale features; poor scaling to very large datasets.
+
+### 🟩 Decision tree
+- **Definition**: recursively split on the feature/threshold that best separates classes.
+- **Analogy**: a game of twenty questions.
+- **Code idea**: `DecisionTreeClassifier(max_depth=5)`.
+- **Use when / watch out**: interpretable; unconstrained depth reaches 100% training accuracy (overfit).
+
+### 🟩 Random forest (bagging)
+- **Definition**: many trees, each on a bootstrap sample with random feature subsets, voted together.
+- **Analogy**: a jury of independent experts.
+- **Code idea**: `RandomForestClassifier(n_estimators=100)`.
+- **Use when / watch out**: strong default; less interpretable, bigger memory.
+
+### 🟩 Gradient boosting / XGBoost / LightGBM
+- **Definition**: trees built one after another, each fitting the errors (loss gradient) of the ensemble so far. XGBoost grows depth-wise with explicit regularization (`reg_alpha`, `reg_lambda`, `gamma`); LightGBM grows leaf-wise and bins features into histograms.
+- **Analogy**: a relay of editors, each fixing what the last missed.
+- **Code idea**: `xgb.XGBClassifier(n_estimators=100, max_depth=4, learning_rate=0.1)`, `lgb.LGBMClassifier(...)`.
+- **Use when / watch out**: top tabular accuracy; more hyperparameters, can overfit small/noisy data; leaf-wise growth can overfit small datasets.
+
+### Differences at a glance
+
+| Algorithm | Group | Boundary | Needs scaling? | Strength | Pitfall |
+|---|---|---|---|---|---|
+| Logistic regression | 🟦 | Linear | Helpful | Fast, interpretable, probabilistic | Non-linear data |
+| Naive Bayes | 🟦 | Probabilistic | No | Very fast, good for text | Independence assumption |
+| k-NN | 🟧 | Local, jagged | Yes | No training phase | Slow inference, high dimensions |
+| SVM (RBF) | 🟧 | Margin-based, non-linear | Yes | High dimensions | Large datasets, kernel choice |
+| Decision tree | 🟩 | Axis-aligned splits | No | Interpretable | Overfits |
+| Random forest | 🟩 | Averaged trees | No | Robust default | Size, less interpretable |
+| Gradient boosting / XGBoost / LightGBM | 🟩 | Sequential trees | No | Best tabular accuracy | Tuning, overfitting |
+
+> [!IMPORTANT]
+> Trees do not need feature scaling; k-NN and SVM do, because they depend on distances or margins.
+
+> [!WARNING]
+> Accuracy alone misleads on imbalanced classes; use the metrics in `12_ml_evaluation`.
+
+> [!TIP]
+> Start with a fast baseline (logistic regression or Naive Bayes), then try a tree ensemble, and compare on the same split.
+
+## Concept map
+
 ```mermaid
 flowchart LR
-  A[Classification task] --> B[Binary / Multiclass / Multilabel]
-  B --> C[Linear: Logistic Regression]
-  B --> D[Instance-based: k-NN]
-  B --> E[Tree-based: Decision Tree]
-  E --> F[Bagging: Random Forest]
-  E --> G[Boosting: Gradient Boosting / XGBoost / LightGBM]
-  B --> H[Margin-based: SVM]
-  B --> I[Probabilistic: Naive Bayes]
-  F --> J[12_ml_evaluation: accuracy/precision/recall/F1/ROC-AUC]
+  A["Classification task"] --> B["Framing: binary / multiclass / multilabel"]
+  subgraph LIN["Linear and probabilistic"]
+    C["Logistic Regression"]
+    I["Naive Bayes"]
+  end
+  subgraph INST["Instance and margin based"]
+    D["k-NN"]
+    H["SVM"]
+  end
+  subgraph TREE["Tree based"]
+    E["Decision Tree"]
+    F["Bagging: Random Forest"]
+    G["Boosting: GBM / XGBoost / LightGBM"]
+  end
+  B --> C
+  B --> I
+  B --> D
+  B --> H
+  B --> E
+  E --> F
+  E --> G
+  J["12_ml_evaluation: accuracy / precision / recall / F1 / ROC-AUC"]
+  C --> J
+  D --> J
+  F --> J
   G --> J
+  classDef task fill:#EDE9FE,stroke:#7C3AED,color:#1a1a1a;
+  classDef lin fill:#DBEAFE,stroke:#2563EB,color:#1a1a1a;
+  classDef inst fill:#FEF3C7,stroke:#D97706,color:#1a1a1a;
+  classDef tree fill:#DCFCE7,stroke:#16A34A,color:#1a1a1a;
+  classDef eval fill:#FEE2E2,stroke:#DC2626,color:#1a1a1a;
+  class A,B task;
+  class C,I lin;
+  class D,H inst;
+  class E,F,G tree;
+  class J eval;
+```
+
+Choosing a starting model:
+
+```mermaid
+flowchart TD
+  Q1{"Tabular data?"}
+  Q1 -->|"yes, want best accuracy"| R1["Gradient boosting: XGBoost or LightGBM"]
+  Q1 -->|"yes, want robust default"| R2["Random forest"]
+  Q1 -->|"need interpretable baseline"| R3["Logistic regression or shallow tree"]
+  Q1 -->|"sparse text features"| R4["Naive Bayes or logistic regression"]
+  classDef q fill:#DBEAFE,stroke:#2563EB,color:#1a1a1a;
+  classDef a fill:#DCFCE7,stroke:#16A34A,color:#1a1a1a;
+  class Q1 q;
+  class R1,R2,R3,R4 a;
 ```
 
 ## Important APIs / functions

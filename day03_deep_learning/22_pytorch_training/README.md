@@ -1,5 +1,38 @@
 # 22 — PyTorch Training: The Complete Pipeline
 
+> A training pipeline is the same loop every time: batch, forward, loss, backward, step, then validate and checkpoint.
+
+| | |
+|---|---|
+| **Day** | 3 — Deep Learning + PyTorch |
+| **Topic** | Training loop, validation, scheduler, checkpointing, early stopping, reproducibility |
+| **Notebooks** | 1 (`01_full_training_pipeline.ipynb`) |
+| **Builds on** | [`19_pytorch_autograd`](../19_pytorch_autograd/README.md), [`20_pytorch_models`](../20_pytorch_models/README.md), [`21_pytorch_data`](../21_pytorch_data/README.md), Day 2 `10_ml_optimization`, `11_generalization` |
+| **Leads to** | [`23_pytorch_performance`](../23_pytorch_performance/README.md) |
+
+## 📖 Short forms used in this topic
+
+| Term | Full form | What it is |
+|---|---|---|
+| LR | Learning Rate | Step size multiplier for weight updates |
+| `StepLR` | Step Learning-Rate scheduler | Multiplies LR by `gamma` every `step_size` epochs |
+| `CosineAnnealingLR` | Cosine-annealing LR scheduler | Decays LR along a cosine curve over `T_max` epochs |
+| `CrossEntropyLoss` | Cross-entropy loss module | Multiclass loss that takes raw logits and class indices |
+| MLP | Multi-Layer Perceptron | The `TwoLayerMLP` model being trained |
+| ReLU | Rectified Linear Unit | Activation `max(0, x)` |
+| GPU | Graphics Processing Unit | Where training usually runs |
+| `state_dict` | State dictionary | Mapping of parameter names to tensors, used to save and load weights |
+| DataLoader | (PyTorch class) | Supplies batches to the loop |
+| SGD / Adam | Stochastic Gradient Descent / Adaptive Moment Estimation | Common optimizers that apply the gradients |
+
+## 🧠 In plain words
+
+Training means repeating: grab a batch, predict, measure the error, compute gradients, and nudge the weights. After each pass over the data you check performance on held-out data, save the best weights, and stop if it has stopped improving. Fixing random seeds lets you repeat the run exactly.
+
+## 🎒 Analogy to remember
+
+Studying for an exam: **practice problems** are the training loop, a **mock exam** you never studied from is validation, a **bookmark on your best mock score** is the checkpoint, **quitting when mock scores stop improving** is early stopping, and a **study-pace plan** that slows down as you refine is the LR schedule. *Where it breaks down:* if you tune decisions on the mock exam too long, it stops being unseen; keep a separate test set.
+
 ## Learning objectives
 
 By the end of this topic you can:
@@ -47,21 +80,127 @@ Dataset
 
 ```mermaid
 flowchart TD
-  A[Dataset] --> B[DataLoader]
-  B --> C[for each epoch]
-  C --> D[for each batch]
-  D --> E[optimizer.zero_grad]
-  E --> F[forward pass]
-  F --> G[compute loss]
-  G --> H[loss.backward]
-  H --> I[optimizer.step]
+  A["Dataset"] --> B["DataLoader"]
+  B --> C["for each epoch"]
+  C --> D["for each batch"]
+  D --> E["optimizer.zero_grad"]
+  E --> F["forward pass"]
+  F --> G["compute loss"]
+  G --> H["loss.backward"]
+  H --> I["optimizer.step"]
   I --> D
-  D -->|epoch done| J[scheduler.step]
-  J --> K[validation: model.eval + no_grad]
-  K --> L{improved?}
-  L -->|yes| M[save checkpoint]
-  L -->|no, patience exceeded| N[early stop]
-  L -->|no, patience remains| C
+  D -->|"epoch done"| J["scheduler.step"]
+  J --> K["validation: model.eval + no_grad"]
+  K --> L{"improved?"}
+  L -->|"yes"| M["save checkpoint"]
+  L -->|"no, patience exceeded"| N["early stop"]
+  L -->|"no, patience remains"| C
+  classDef data fill:#DBEAFE,stroke:#2563EB,color:#1a1a1a;
+  classDef loop fill:#DCFCE7,stroke:#16A34A,color:#1a1a1a;
+  classDef val fill:#FEF3C7,stroke:#D97706,color:#1a1a1a;
+  classDef good fill:#EDE9FE,stroke:#7C3AED,color:#1a1a1a;
+  classDef stop fill:#FEE2E2,stroke:#DC2626,color:#1a1a1a;
+  class A,B data;
+  class C,D,E,F,G,H,I loop;
+  class J,K,L val;
+  class M good;
+  class N stop;
+```
+
+## 🔍 Concepts explained
+
+> [!NOTE]
+> Chips: 🟦 training step · 🟩 validation · 🟧 saving and stopping · 🟪 schedule and reproducibility.
+
+### 🟦 Training loop
+- **Definition**: per batch: zero grads, forward, loss, `.backward()`, `optimizer.step()`.
+- **Analogy**: one practice problem.
+- **Code idea**:
+  ```python
+  model.train()
+  for xb, yb in train_loader:
+      optimizer.zero_grad()
+      loss = criterion(model(xb), yb)
+      loss.backward()
+      optimizer.step()
+  ```
+- **Use when / watch out**: forgetting `zero_grad()` accumulates gradients (topic 19).
+
+### 🟩 Validation loop
+- **Definition**: evaluate on held-out data with `model.eval()` and `torch.no_grad()`.
+- **Analogy**: the mock exam.
+- **Use when / watch out**: forgetting `eval()` leaves Dropout on; forgetting `no_grad()` wastes memory.
+
+### 🟧 Checkpointing
+- **Definition**: save `model.state_dict()` (plus optimizer state and epoch to resume) when validation improves.
+- **Analogy**: a save point in a game.
+- **Code idea**: `torch.save(model.state_dict(), path)`; `model.load_state_dict(torch.load(path))`.
+- **Use when / watch out**: to resume training, also save optimizer and scheduler state.
+
+### 🟧 Early stopping
+- **Definition**: stop when validation loss has not improved for `patience` epochs.
+- **Analogy**: stop studying when mock scores plateau.
+- **Use when / watch out**: reload the best checkpoint afterwards, not the last weights.
+
+### 🟪 LR scheduler
+- **Definition**: changes the learning rate over time via `torch.optim.lr_scheduler`.
+- **Analogy**: big strides at first, small careful steps near the goal.
+- **Use when / watch out**: call `scheduler.step()` after `optimizer.step()`, at the cadence the schedule expects (per epoch or per batch).
+
+### 🟪 Reproducibility
+- **Definition**: seed Python, NumPy and PyTorch so repeated runs match.
+- **Code idea**: `torch.manual_seed(42)` (and `random.seed`, `np.random.seed`).
+- **Use when / watch out**: GPU kernels may add non-determinism; same seed on CPU gives identical results as the notebook verifies.
+
+### Differences at a glance
+
+| | Mode | `model.train()` / `eval()` | Gradients? | Updates weights? |
+|---|---|---|---|---|
+| 🟦 | Training loop | `train()` | Yes | Yes |
+| 🟩 | Validation loop | `eval()` | No (`no_grad`) | No |
+
+| | LR schedule | Behaviour | Good for |
+|---|---|---|---|
+| 🟪 | `StepLR` | Drop LR by a factor every N epochs | Simple, predictable decay |
+| 🟪 | `CosineAnnealingLR` | Smooth cosine decay | Smooth finish, common in modern recipes |
+
+> [!WARNING]
+> Never validate with the training-mode model on the training set and call it generalization. Always evaluate on held-out data in `eval()` mode.
+
+> [!IMPORTANT]
+> Order matters: `optimizer.zero_grad()`, forward, `loss.backward()`, `optimizer.step()`. Reordering silently corrupts training.
+
+### 🗺️ Concept map
+
+```mermaid
+flowchart TD
+  subgraph TRAIN["Train"]
+    T1["train mode"] --> T2["forward, loss, backward, step"]
+  end
+  subgraph VAL["Validate"]
+    V1["eval mode + no_grad"] --> V2["val loss"]
+  end
+  subgraph KEEP["Keep or stop"]
+    C1["Checkpoint best"]
+    C2["Early stop"]
+  end
+  subgraph SCH["Schedule and seed"]
+    S1["LR scheduler"]
+    S2["Seed everything"]
+  end
+  T2 --> V1
+  V2 --> C1
+  V2 --> C2
+  S1 --> T2
+  S2 --> T1
+  classDef train fill:#DBEAFE,stroke:#2563EB,color:#1a1a1a;
+  classDef val fill:#DCFCE7,stroke:#16A34A,color:#1a1a1a;
+  classDef keep fill:#FEF3C7,stroke:#D97706,color:#1a1a1a;
+  classDef sch fill:#EDE9FE,stroke:#7C3AED,color:#1a1a1a;
+  class T1,T2 train;
+  class V1,V2 val;
+  class C1,C2 keep;
+  class S1,S2 sch;
 ```
 
 ## Important APIs / functions

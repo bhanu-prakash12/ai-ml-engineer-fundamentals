@@ -1,5 +1,35 @@
 # 06 — ML Fundamentals
 
+> The shared vocabulary of machine learning: how models learn, what they learn, and why "works on training data" is not enough.
+
+| | |
+|---|---|
+| **Day** | 2 — Machine Learning |
+| **Topic** | Learning paradigms, parameters vs hyperparameters, training vs inference, capacity |
+| **Notebooks** | [`01_ml_fundamentals.ipynb`](01_ml_fundamentals.ipynb) |
+| **Builds on** | Day 1 — [`05_ml_mathematics`](../../day01_python_data_math/05_ml_mathematics/README.md), [`04_datasets`](../../day01_python_data_math/04_datasets/README.md) |
+| **Leads to** | [`07_regression`](../07_regression/README.md), [`11_generalization`](../11_generalization/README.md) |
+
+## 📖 Short forms used in this topic
+
+| Term | Full form | What it is |
+|---|---|---|
+| **ML** | Machine Learning | Learning patterns from data to make predictions, instead of hand-coding rules. |
+| **RL** | Reinforcement Learning | An agent learns by trial and error from a (possibly delayed) reward signal. |
+| **LLM** | Large Language Model | Very large Transformer trained on text to predict the next token (e.g. GPT). |
+| **MSE** | Mean Squared Error | Average of squared prediction errors; the standard regression loss. |
+| **API** | Application Programming Interface | The functions/classes a library exposes (e.g. scikit-learn's `fit` / `predict`). |
+| **k-NN** | k-Nearest Neighbors | Predicts from the `k` closest training points; `k` is a hyperparameter. |
+
+## 🧠 In plain words
+
+Machine learning is writing programs that *learn their behaviour from examples* instead of being hand-coded. A model has internal numbers (**parameters**) that are tuned during **training** to fit data; you choose the settings of that tuning process (**hyperparameters**) yourself. Afterwards, **inference** applies the frozen parameters to new data. A good model **generalizes**: it works on data it has never seen.
+
+## 🎒 Analogy to remember
+
+Learning to cook from recipes-with-tasting. The **parameters** are the exact amounts of salt, sugar and spice you settle on by tasting (learned). The **hyperparameters** are how you practise: how many dishes you cook, how big each adjustment is (set beforehand). **Training** is practising in your kitchen; **inference** is serving a new guest. **Overfitting** is perfecting a dish for one friend's taste so it flops with everyone else.
+*Where it breaks:* a cook adjusts by feel; ML adjusts by minimizing a numeric loss.
+
 ## Learning objectives
 
 By the end of this topic you can:
@@ -31,18 +61,101 @@ Day 1 complete, especially [`05_ml_mathematics`](../../day01_python_data_math/05
 - **Generalization**: how well a model performs on data it did *not* train on — the entire point of ML.
 - **Model capacity**: how complex a function class a model can represent — too little capacity underfits; too much, without enough data/regularization, overfits (formalized in `11_generalization`).
 
+## 🔍 Concepts explained
+
+### Learning paradigms
+
+| Chip | Paradigm | Data it needs | Typical task | Pitfall |
+|---|---|---|---|---|
+| 🟦 | Supervised | Features + labels | Regression, classification | Labels are expensive |
+| 🟩 | Unsupervised | Features only | Clustering, dimensionality reduction | No single "right answer" to validate against |
+| 🟨 | Semi-supervised | Few labels + many unlabeled | Image/text with scarce labels | Poor labels can propagate errors |
+| 🟪 | Self-supervised | Raw data (labels made from it) | LLM pretraining (masked/next-token prediction) | Needs huge data and compute |
+| 🟥 | Reinforcement | Environment + reward signal | Games, robotics, policy tuning | Sparse/delayed rewards, unstable training |
+
+> [!NOTE]
+> Self-supervised is *not* classic unsupervised: it does have a prediction target, but the target is generated from the data automatically.
+
+### 🟦 Supervised learning
+- **Definition:** learn `f(features) -> label` from examples with known answers.
+- **Analogy:** studying with an answer key.
+- **Code idea:** `LinearRegression().fit(X, y)` then `.predict(X_new)`.
+- **Use when / watch out:** you have trustworthy labels; evaluate on held-out data, not training data.
+
+### 🟩 Unsupervised learning
+- **Definition:** find structure in data without labels.
+- **Analogy:** sorting a pile of unlabeled photos into piles by similarity.
+- **Code idea:** `KMeans(n_clusters=3).fit(data)` gives `.labels_` and `.cluster_centers_`.
+- **Use when / watch out:** exploring data; cluster count and meaning are your judgement.
+
+### 🟪 Self-supervised learning
+- **Definition:** hide part of the input and predict it from the rest; the hidden part is the label.
+- **Analogy:** fill-in-the-blank exercises made from any book.
+- **Code idea:** from a sequence, use neighbours `[seq[i-1], seq[i+1]]` to predict `seq[i]` (as in the notebook).
+- **Use when / watch out:** lots of raw data and no labels; basis of LLM pretraining.
+
+### 🟥 Reinforcement learning
+- **Definition:** an agent acts in an environment and learns to maximize cumulative reward.
+- **Analogy:** training a dog with treats; the reward may come long after the action.
+- **Use when / watch out:** sequential decisions; covered conceptually here only.
+
+### Parameters vs hyperparameters
+
+| Chip | Kind | Who sets it | When | Examples |
+|---|---|---|---|---|
+| 🟦 | Parameter | The training algorithm | During training | `coef_`, `intercept_`, K-means `cluster_centers_` |
+| 🟧 | Hyperparameter | You (or a search) | Before training | learning rate, `n_clusters`, polynomial `degree`, `k` in k-NN |
+
+- **Analogy:** parameters are the recipe amounts you converge on; hyperparameters are the cooking method you chose first.
+- **Watch out:** if you tune hyperparameters on the test set, the test score is no longer trustworthy.
+
+### Training vs inference
+
+| | Training | Inference |
+|---|---|---|
+| Uses loss and optimizer | Yes | No |
+| Parameters | Updated | Fixed |
+| Cost profile | Heavy, offline | Latency-sensitive, repeated |
+| Code | `.fit(X, y)` | `.predict(X_new)` |
+
+### Generalization and capacity
+- **Definition:** generalization is performance on unseen data; capacity is how complex a function the model can represent.
+- **Analogy:** a student who memorizes past exam answers (high capacity, no understanding) versus one who learns the method.
+- **Formula/Code idea:** compare training vs validation error as polynomial `degree` grows (1, 4, 15 in the notebook).
+- **Use when / watch out:** too little capacity underfits; too much overfits without data or regularization.
+
+> [!WARNING]
+> The lowest training error (degree 15) is the *worst* generalizer in the notebook's demo. Never judge by training error alone.
+
+> [!TIP]
+> Interview shortcut: if you can say who sets a value (algorithm or you), you know whether it is a parameter or a hyperparameter.
+
 ```mermaid
 flowchart TD
-  A[Learning paradigm] --> B[Supervised: labeled data -> regression/classification]
-  A --> C[Unsupervised: unlabeled data -> structure]
-  A --> D[Semi-supervised: few labels + many unlabeled]
-  A --> E[Self-supervised: labels derived from data itself]
-  A --> F[Reinforcement: agent + environment + reward]
-  G[Features + Labels] --> H[Training: fit Parameters via a loss + optimizer]
-  H --> I[Inference: fixed Parameters -> predictions on new data]
-  J[Hyperparameters] -.set before training.-> H
-  H --> K[Generalization: performance on unseen data]
-  K -.bounded by.-> L[Model capacity]
+  subgraph PAR["Learning paradigms"]
+    B["Supervised: labeled data -> regression or classification"]
+    C["Unsupervised: unlabeled data -> structure"]
+    D["Semi-supervised: few labels + many unlabeled"]
+    E["Self-supervised: labels derived from data itself"]
+    F["Reinforcement: agent + environment + reward"]
+  end
+  subgraph PIPE["Learning pipeline"]
+    G["Features + Labels"] --> H["Training: fit Parameters via a loss + optimizer"]
+    H --> I["Inference: fixed Parameters -> predictions on new data"]
+  end
+  J["Hyperparameters"] -.->|"set before training"| H
+  H --> K["Generalization: performance on unseen data"]
+  K -.->|"bounded by"| L["Model capacity"]
+  classDef para fill:#DBEAFE,stroke:#2563EB,color:#1a1a1a;
+  classDef pipe fill:#DCFCE7,stroke:#16A34A,color:#1a1a1a;
+  classDef hyper fill:#FEF3C7,stroke:#D97706,color:#1a1a1a;
+  classDef risk fill:#FEE2E2,stroke:#DC2626,color:#1a1a1a;
+  classDef cap fill:#EDE9FE,stroke:#7C3AED,color:#1a1a1a;
+  class B,C,D,E,F para;
+  class G,H,I pipe;
+  class J hyper;
+  class K risk;
+  class L cap;
 ```
 
 ## Important APIs / functions

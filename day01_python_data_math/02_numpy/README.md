@@ -1,5 +1,40 @@
 # 02 — NumPy: Thinking in Shapes
 
+> NumPy's mental model - shape, dtype, broadcasting - is the vocabulary of every tensor library; learn to predict shapes before you run code.
+
+| | |
+|---|---|
+| **Day** | 1 — Python + Data + Math |
+| **Topic** | 02 — NumPy: thinking in shapes |
+| **Notebooks** | 1 (`01_numpy_fundamentals`) |
+| **Builds on** | [`01_python`](../01_python/README.md) |
+| **Leads to** | [`03_data_libraries`](../03_data_libraries/README.md), [`05_ml_mathematics`](../05_ml_mathematics/README.md), PyTorch tensors (Day 3) |
+
+## 📖 Short forms used in this topic
+
+| Term | Full form | What it is |
+|---|---|---|
+| **ndarray** | N-dimensional array | NumPy's core typed, fixed-shape array object. |
+| **dtype** | Data type | Element type of an array (`float32`, `int64`, ...) controlling memory and precision. |
+| **ndim** | Number of dimensions | How many axes an array has (`len(shape)`). |
+| **axis** | Axis | One dimension of an array; `axis=0` runs down rows, `axis=1` across columns. |
+| **matmul** | Matrix multiplication | The `@` / `np.matmul` operation: `(m,n) @ (n,p) -> (m,p)`. |
+| **ReLU** | Rectified Linear Unit | Activation `max(x, 0)` (an exercise here). |
+| **X, W, b** | Inputs, weights, bias | Input batch, parameter matrix and bias vector of a linear layer `X @ W + b`. |
+| **ML** | Machine Learning | Building models that learn from data. |
+| **GPU** | Graphics Processing Unit | Parallel processor for deep learning, typically using `float32` or lower precision. |
+| **float32 / float64** | 32-/64-bit floating point | Single and double precision numbers. |
+| **CS231n** | Stanford course CS231n | Convolutional Neural Networks course; its NumPy tutorial is listed in References. |
+
+## 🧠 In plain words
+
+NumPy gives Python a fast, fixed-type grid of numbers (the `ndarray`) and lets you operate on the whole grid at once instead of looping. Each array has a `shape` that tells you its size along each axis, and a small set of shape rules (broadcasting, matmul) decides what operations are allowed.
+
+## 🎒 Analogy to remember
+
+An `ndarray` is an **egg carton / spreadsheet block**: every cell holds the same kind of thing, in a fixed grid. A vectorized operation is a **stamp across the whole carton** instead of marking each egg by hand. Broadcasting is **re-using one row of a stamp** across every row of the carton.
+*Where it breaks down:* a spreadsheet can hold mixed types; an ndarray cannot, and that uniformity is precisely what makes it fast.
+
 ## Learning objectives
 
 By the end of this topic you can:
@@ -35,14 +70,101 @@ model's `forward()` method. If you can't, every shape-mismatch error becomes a g
 
 ```mermaid
 flowchart LR
-  A[ndarray: shape/dtype] --> B[Indexing & slicing & masking]
-  B --> C[reshape/transpose/concatenate]
-  C --> D[Broadcasting rules]
-  D --> E[Vectorized ops]
-  E --> F[dot/matmul/reductions]
-  F --> G[Tensor-shape reasoning: X @ W + b]
-  G --> H[Ready for Pandas/Polars: tabular data built on the same shape thinking]
+  subgraph G1["Structure"]
+    A["ndarray: shape and dtype"]
+  end
+  subgraph G2["Selecting and reshaping"]
+    B["Indexing, slicing, masking"] --> C["reshape, transpose, concatenate"]
+  end
+  subgraph G3["Computing"]
+    D["Broadcasting rules"] --> E["Vectorized ops"] --> F["dot, matmul, reductions"]
+  end
+  G["Tensor-shape reasoning: X @ W + b"]
+  H["Ready for Pandas and Polars"]
+  A --> B
+  C --> D
+  F --> G --> H
+  classDef struct fill:#DBEAFE,stroke:#2563EB,color:#1a1a1a;
+  classDef sel fill:#DCFCE7,stroke:#16A34A,color:#1a1a1a;
+  classDef comp fill:#FEF3C7,stroke:#D97706,color:#1a1a1a;
+  classDef goal fill:#EDE9FE,stroke:#7C3AED,color:#1a1a1a;
+  class A struct;
+  class B,C sel;
+  class D,E,F comp;
+  class G,H goal;
 ```
+
+## 🔍 Concepts explained
+
+**Category chips:** 🟦 Structure · 🟩 Selecting and reshaping · 🟧 Computing · 🟥 Pitfalls
+
+### 🟦 Structure: `ndarray`, `shape`, `dtype`
+- **Definition:** a block of same-typed numbers plus metadata (`shape`, `dtype`, strides).
+- **Analogy:** egg carton - fixed grid, one kind of egg.
+- **Code idea:** `a = np.zeros((32, 10), dtype=np.float32); a.shape  # (32, 10)`
+- **Use when / watch out:** print or assert shapes constantly. `float32` is the usual choice for deep learning.
+
+### 🟩 Selecting and reshaping
+
+| Operation | What it does | Copy or view | Pitfall |
+|---|---|---|---|
+| Basic slice `a[1:3]` | contiguous / strided sub-array | view | mutating it changes the original |
+| Boolean mask `a[a > 0]` | elements where condition is true | copy | result is 1-D |
+| Fancy index `a[[0, 2]]` | pick rows/elements by index list | copy | easy to mix up with slices |
+| `reshape` | same data, new shape | usually view | total size must match |
+| `transpose` / `.T` | swap axes | view | result may be non-contiguous |
+| `squeeze` / `expand_dims` | remove / add length-1 axes | view | wrong axis breaks broadcasting |
+| `concatenate` | join along an **existing** axis | copy | other dims must match |
+| `stack` | join along a **new** axis | copy | all shapes must be identical |
+
+> [!WARNING]
+> `.reshape()` often returns a **view**. Writing into the result can silently modify the original array.
+
+### 🟧 Computing
+
+**Broadcasting**
+- **Definition:** shapes are compared from the **last axis backwards**; two dims are compatible if equal or one of them is 1. A size-1 (or missing) dim is virtually stretched.
+- **Analogy:** photocopying one row to fill every row of a grid, without actually printing the copies.
+- **Code idea:** `(32,10) + (10,) -> (32,10)`; `(32,1) + (1,10) -> (32,10)`; `(32,10) + (5,)` raises `ValueError`.
+- **Use when / watch out:** bias addition, normalization. A mistaken extra axis silently makes a huge `(n, n)` array.
+
+**Vectorization**
+- **Definition:** apply an operation to a whole array in compiled code.
+- **Analogy:** a stamp across the carton vs marking each egg.
+- **Use when / watch out:** almost always; the speed-up comes from removing per-element Python overhead.
+
+**Matmul and shape reasoning**
+- **Definition:** `X @ W` with `X:(batch, in)` and `W:(in, out)` gives `(batch, out)`; inner dims must match.
+- **Formula:** `Y = X @ W + b`, with `b:(out,)` broadcast across the batch.
+- **Use when / watch out:** `*` is elementwise, `@` is matrix product.
+
+**Reductions**
+
+| Call on shape `(5, 3)` | Collapses | Result shape |
+|---|---|---|
+| `a.sum(axis=0)` | rows (down each column) | `(3,)` |
+| `a.sum(axis=1)` | columns (across each row) | `(5,)` |
+| `a.sum()` | everything | scalar |
+
+> [!TIP]
+> Rule of thumb: the axis you name **disappears** from the shape.
+
+```mermaid
+flowchart TD
+  S["X: (batch, in)"] --> M["matmul with W: (in, out)"]
+  M --> R["(batch, out)"]
+  R --> A["add b: (out,) via broadcasting"]
+  A --> Y["Y: (batch, out)"]
+  classDef inp fill:#DBEAFE,stroke:#2563EB,color:#1a1a1a;
+  classDef op fill:#FEF3C7,stroke:#D97706,color:#1a1a1a;
+  classDef out fill:#DCFCE7,stroke:#16A34A,color:#1a1a1a;
+  class S inp;
+  class M,A op;
+  class R,Y out;
+```
+
+> [!IMPORTANT]
+> Shape thinking transfers one-to-one to PyTorch and JAX: if you can name every tensor's shape, you can read any `forward()`.
 
 ## Important APIs / functions
 

@@ -1,5 +1,37 @@
 # 15 — Deep Learning Fundamentals
 
+> A neural network is weighted sums + non-linear activations + a loss, stacked in layers — master the forward pass and the rest of deep learning is bookkeeping.
+
+| | |
+|---|---|
+| **Day** | 3 — Deep Learning + PyTorch |
+| **Topic** | Perceptron, MLP forward pass, activations, losses |
+| **Notebooks** | 1 (`01_perceptron_and_mlp_forward_pass.ipynb`) |
+| **Builds on** | Day 2 `10_ml_optimization`, Day 1 `05_ml_mathematics` |
+| **Leads to** | [`16_backpropagation`](../16_backpropagation/README.md) |
+
+## 📖 Short forms used in this topic
+
+| Term | Full form | What it is |
+|---|---|---|
+| MLP | Multi-Layer Perceptron | A network of fully-connected layers with non-linear activations between them |
+| ReLU | Rectified Linear Unit | Activation `max(0, x)` |
+| GELU | Gaussian Error Linear Unit | Smooth ReLU-like activation `x * Φ(x)`, where Φ is the Gaussian CDF |
+| CDF | Cumulative Distribution Function | `P(X ≤ x)`; GELU uses the standard normal's CDF |
+| MSE | Mean Squared Error | Average of squared differences between prediction and target |
+| BCE | Binary Cross-Entropy | Log-loss for two-class problems |
+| CE | Cross-Entropy | Multiclass log-loss: `-log(p of the true class)`, averaged |
+| NumPy | Numerical Python | Array library used for the from-scratch implementations |
+| `X`, `W`, `b`, `Z`, `A` | Input, weights, bias, pre-activation, activation | `Z = XW + b`, then `A = activation(Z)` |
+
+## 🧠 In plain words
+
+A neural network is a chain of simple steps: multiply the inputs by learned weights, add a bias, then bend the result with an activation function. Repeat for each layer, and finish by scoring the answer with a loss function. The activation "bends" are what let the network learn curved, complex patterns instead of only straight lines.
+
+## 🎒 Analogy to remember
+
+A neural network is a **panel of judges scoring a contestant**: each judge (neuron) weighs different criteria (weights), adds a personal leaning (bias), and only "speaks up" if the score clears their threshold (activation). The next panel judges the first panel's verdicts. The loss is the final scoreboard saying how far the panel was from the truth. *Where it breaks down:* real neurons are numbers, not people, and the weights are learned automatically rather than chosen.
+
 ## Learning objectives
 
 By the end of this topic you can:
@@ -44,13 +76,99 @@ multiplication, the chain rule).
 
 ```mermaid
 flowchart LR
-  A[Input X] --> B[Layer 1: Z1 = XW1 + b1]
-  B --> C[Activation: ReLU/GELU/...]
-  C --> D[Layer 2: Z2 = AW2 + b2]
-  D --> E[Output activation: sigmoid/softmax]
-  E --> F[Loss: BCE/cross-entropy/MSE]
-  F -.gradient flows backward.-> B
-  F -.gradient flows backward.-> D
+  A["Input X"] --> B["Layer 1: Z1 = XW1 + b1"]
+  B --> C["Activation: ReLU or GELU"]
+  C --> D["Layer 2: Z2 = AW2 + b2"]
+  D --> E["Output activation: sigmoid or softmax"]
+  E --> F["Loss: BCE, cross-entropy or MSE"]
+  F -.->|"gradient flows backward"| B
+  F -.->|"gradient flows backward"| D
+  classDef data fill:#DBEAFE,stroke:#2563EB,color:#1a1a1a;
+  classDef act fill:#DCFCE7,stroke:#16A34A,color:#1a1a1a;
+  classDef loss fill:#FEF3C7,stroke:#D97706,color:#1a1a1a;
+  class A data;
+  class B,D data;
+  class C,E act;
+  class F loss;
+```
+
+## 🔍 Concepts explained
+
+> [!NOTE]
+> Category chips used below: 🟦 structure (perceptron, MLP, layers) · 🟩 activations · 🟧 losses · 🟥 numerical pitfalls.
+
+### 🟦 Perceptron and MLP
+- **Definition**: a perceptron is `step(w·x + b)`; an MLP stacks layers of such units with non-linear activations in between.
+- **Analogy**: one judge vs. a whole panel of judges.
+- **Code idea**: `Z1 = X @ W1 + b1; A1 = relu(Z1); Z2 = A1 @ W2 + b2`.
+- **Use when / watch out**: tabular or small-scale problems; without non-linearity, stacked layers collapse into one linear layer.
+
+### 🟦 Forward pass
+- **Definition**: pushing an input through every layer in order to get a prediction.
+- **Analogy**: an assembly line where each station transforms the part.
+- **Code idea**: track shapes: `(batch, in) @ (in, hidden) -> (batch, hidden)`.
+- **Use when / watch out**: assert shapes at each step; a wrong shape is the most common early bug.
+
+### 🟩 Activation functions
+
+| | Activation | Formula | Range | Use when | Pitfall |
+|---|---|---|---|---|---|
+| 🟩 | Sigmoid | `1/(1+e^-x)` | (0, 1) | Binary output probability | Saturates, vanishing gradients |
+| 🟩 | Tanh | `(e^x - e^-x)/(e^x + e^-x)` | (-1, 1) | Zero-centred hidden units (older nets, RNNs) | Still saturates |
+| 🟩 | ReLU | `max(0, x)` | [0, ∞) | Default for hidden layers | Dying ReLU (always 0) |
+| 🟩 | Leaky ReLU | `max(αx, x)` | (-∞, ∞) | When dead neurons appear | Extra hyperparameter α |
+| 🟩 | GELU | `x * Φ(x)` | about [-0.17, ∞) | Transformers (GPT, BERT) | Costlier than ReLU |
+| 🟩 | Softmax | `e^zi / Σ e^zj` | (0, 1), sums to 1 | Multiclass output layer | Overflow if not max-subtracted |
+
+> [!TIP]
+> Hidden layers: start with ReLU (or GELU in Transformers). Output layer: sigmoid for binary, softmax for multiclass, none (identity) for regression.
+
+### 🟧 Loss functions
+
+| | Loss | Task | Formula idea | Pitfall |
+|---|---|---|---|---|
+| 🟧 | MSE | Regression | `mean((ŷ - y)^2)` | Poor gradients for classification |
+| 🟧 | BCE | Binary classification | `-[y log p + (1-y) log(1-p)]` | `log(0)`; clip or use logits |
+| 🟧 | Cross-entropy | Multiclass | `-log(p_true_class)` | Pair with a stable softmax |
+
+- **Analogy**: a loss is a strictness-graded exam. Cross-entropy is the harsh grader who punishes confident wrong answers far more than hesitant ones.
+
+> [!WARNING]
+> Softmax then `log` by hand can overflow or give `log(0)`. Use the stable form: subtract `max(z)` before exponentiating (log-sum-exp).
+
+> [!IMPORTANT]
+> Softmax sums to 1 across **classes for one sample**, not across the batch.
+
+### 🗺️ Concept map
+
+```mermaid
+flowchart TD
+  subgraph STRUCT["Structure"]
+    P["Perceptron"] --> M["MLP: stacked layers"]
+    M --> FP["Forward pass: Z = XW + b"]
+  end
+  subgraph ACT["Activations"]
+    S["Sigmoid / Tanh"]
+    R["ReLU / Leaky ReLU"]
+    G["GELU"]
+    SM["Softmax"]
+  end
+  subgraph LOSS["Losses"]
+    MS["MSE: regression"]
+    BC["BCE: binary"]
+    CE["Cross-entropy: multiclass"]
+  end
+  FP --> ACT
+  ACT --> LOSS
+  LOSS --> BP["Next: backpropagation"]
+  classDef struct fill:#DBEAFE,stroke:#2563EB,color:#1a1a1a;
+  classDef act fill:#DCFCE7,stroke:#16A34A,color:#1a1a1a;
+  classDef loss fill:#FEF3C7,stroke:#D97706,color:#1a1a1a;
+  classDef next fill:#EDE9FE,stroke:#7C3AED,color:#1a1a1a;
+  class P,M,FP struct;
+  class S,R,G,SM act;
+  class MS,BC,CE loss;
+  class BP next;
 ```
 
 ## Important APIs / functions
